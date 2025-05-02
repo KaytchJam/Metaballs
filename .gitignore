@@ -1,0 +1,5 @@
+build
+.vscode
+
+# src/dependencies/glfw-3.4/docs
+# src/dependencies/glfw-3.4/examples
