@@ -38,6 +38,7 @@ struct Uniform {
     std::function<void(GLuint, GLint)> func;
 };
 
+// Shader abstraction to make using shaders ezpz
 class Shader {
 private:
     typedef std::unordered_map<std::string, Uniform> uniform_map;
@@ -85,15 +86,25 @@ private:
         const std::string& vert_shader_src,
         const std::string& frag_shader_src
     ) {
+        char infoLog[512];
         GLuint v_shader_id, f_shader_id;
-        if (!Shader::create_shader(v_shader_id, vert_shader_src, GL_VERTEX_SHADER))
+        if (!Shader::create_shader(v_shader_id, vert_shader_src, GL_VERTEX_SHADER)) {
+            glGetShaderInfoLog(v_shader_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
             return std::nullopt;
+        }
     
-        if (!Shader::create_shader(f_shader_id, frag_shader_src, GL_FRAGMENT_SHADER))
+        if (!Shader::create_shader(f_shader_id, frag_shader_src, GL_FRAGMENT_SHADER)) {
+            glGetShaderInfoLog(f_shader_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
             return std::nullopt;
+        }
     
-        if (!Shader::create_program(this->program_id, v_shader_id, f_shader_id))
+        if (!Shader::create_program(this->program_id, v_shader_id, f_shader_id)) {
+            glGetProgramInfoLog(this->program_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
             return std::nullopt;
+        }
     
         glDeleteShader(v_shader_id);
         glDeleteShader(f_shader_id);
@@ -143,6 +154,7 @@ public:
         return *this;
     }
 
+    // call all uniform functions
     Shader& ping_all_uniforms() {
         GLint prev_program_id = 0;
         glGetIntegerv(GL_CURRENT_PROGRAM, &prev_program_id);
@@ -156,6 +168,7 @@ public:
         return *this;
     }
 
+    // call a specific uniform function
     Shader& ping_uniform(const std::string& uniform_name) {
         GLint prev_program_id = 0;
         glGetIntegerv(GL_CURRENT_PROGRAM, &prev_program_id);

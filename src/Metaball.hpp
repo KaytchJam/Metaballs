@@ -39,7 +39,8 @@ private:
     std::vector<GLuint> indices;
     float isovalue = 1.f;
 
-    static constexpr size_t GRID_SIZE = 100;
+    static constexpr size_t GRID_SIZE = 60;
+    static constexpr float CUBE_SIZE = 1.f / 10.f;
 
     static float blob_simple(const glm::vec3& center, const glm::vec3& pt) {
         return 1.f / (std::powf(center.x - pt.x, 2) + std::powf(center.y - pt.y, 2) + std::powf(center.z - pt.z, 2));
@@ -60,7 +61,6 @@ private:
         // how big should the cube be? for now: 15 * 15 * 15
 
         constexpr size_t GSIZE_PLUS = GRID_SIZE + 1;
-        const float CUBE_SIZE = 1.f / 5.f;
         const glm::vec3 grid_min = - glm::vec3(GRID_SIZE) * CUBE_SIZE * 0.5f;
 
         for (size_t z = 0; z < GSIZE_PLUS; z++) {
@@ -133,13 +133,10 @@ private:
         uint8_t edge_mask
     ) {
         std::array<glm::vec3, 12> lerp_set = {};
-        int bit_index = 0;
-    
-        while (edge_mask != 0 && bit_index < 12) {
-            //uint8_t bit = (edge_mask & 0x1);
-        
-            int e1 = edge_mappings[bit_index][0];
-            int e2 = edge_mappings[bit_index][1];
+
+        for (int edge = 0; edge < 12; edge++) {
+            int e1 = edge_mappings[edge][0];
+            int e2 = edge_mappings[edge][1];
     
             const glm::vec3& P1 = cube_cpts[e1].pos;
             const float V1 = cube_cpts[e1].density;
@@ -149,10 +146,7 @@ private:
     
             float denom = V2 - V1;
             if (std::abs(denom) < 1e-6f) denom = 1e-6f;
-            lerp_set[bit_index] = P1 + (isovalue - V1) * (P2 - P1) / denom;
-    
-            //edge_mask = edge_mask >> 1;
-            bit_index += 1;
+            lerp_set[edge] = P1 + (isovalue - V1) * (P2 - P1) / denom;
         }
     
         return lerp_set;
@@ -229,9 +223,15 @@ public:
         return *this;
     }
 
-    MetaballEngine& add_metaball(const glm::vec3& center, const MetaFunction& f = MetaballEngine::blob_simple) {
+    size_t add_metaball(const glm::vec3& center, const MetaFunction& f = MetaballEngine::blob_simple) {
+        size_t metaball_index = this->metaballs.size();
         this->metaballs.push_back(Metaball{center, std::move(f)});
-        return *this;
+        return metaball_index;
+    }
+
+    Metaball& get_metaball(size_t index) {
+        assert(0 <= index && index < this->metaballs.size() && "INDEX IS OUT OF RANGE");
+        return this->metaballs[index];
     }
 
     const std::vector<Vertex>& get_vertices() const {
