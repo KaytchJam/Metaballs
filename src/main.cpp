@@ -436,7 +436,6 @@ int t3() {
     constexpr size_t CPL = 10;
 
     glm::vec3 center = glm::vec3(0.f);
-
     auto metaball_func = [center](const glm::vec3 pt) {
         return 1.f / (std::powf(center.x - pt.x, 2) + std::powf(center.y - pt.y, 2) + std::powf(center.z - pt.z, 2));
     };
@@ -587,6 +586,7 @@ std::array<glm::vec3, 12> calc_edge_lerps(
 
 struct MetaballBufferData {
     std::vector<glm::vec3> vertex_buffer;
+    std::vector<glm::vec3> normal_buffer;
     std::vector<uint32_t> index_buffer;
 };
 
@@ -594,6 +594,12 @@ MetaballBufferData construct_metaball_mesh() {
     const float ISOVALUE = 2.0f;
     std::vector<glm::vec3> vertex_buffer;
     std::vector<uint32_t> index_buffer;
+    std::vector<glm::vec3> normal_buffer;
+
+    glm::vec3 center = glm::vec3(0.f);
+    auto metaball_func = [center](const glm::vec3 pt) {
+        return 1.f / (std::powf(center.x - pt.x, 2) + std::powf(center.y - pt.y, 2) + std::powf(center.z - pt.z, 2));
+    };
 
     ArrayCube<control_point_t, 11> cpts = get_metaball_control_points(ISOVALUE);
 
@@ -611,11 +617,20 @@ MetaballBufferData construct_metaball_mesh() {
                 int edge_index = 0;
                 while (triTable[cube_index][edge_index] != -1 && edge_index + 2 < 16) {
 
+                    const glm::vec3& p0 = lerp_points[triTable[cube_index][edge_index]];
+                    const glm::vec3& p1 = lerp_points[triTable[cube_index][edge_index+1]];
+                    const glm::vec3& p2 = lerp_points[triTable[cube_index][edge_index+2]];
+
                     // update vertices
                     const uint32_t base_index = (uint32_t) vertex_buffer.size();
-                    vertex_buffer.push_back(lerp_points[triTable[cube_index][edge_index]]);
-                    vertex_buffer.push_back(lerp_points[triTable[cube_index][edge_index + 1]]);
-                    vertex_buffer.push_back(lerp_points[triTable[cube_index][edge_index + 2]]);
+                    vertex_buffer.push_back(p0);
+                    vertex_buffer.push_back(p1);
+                    vertex_buffer.push_back(p2);
+
+                    // update normals
+                    normal_buffer.push_back(-gradient_at(p0, metaball_func));
+                    normal_buffer.push_back(-gradient_at(p1, metaball_func));
+                    normal_buffer.push_back(-gradient_at(p2, metaball_func));
 
                     // update indices
                     index_buffer.push_back(base_index);
@@ -632,7 +647,7 @@ MetaballBufferData construct_metaball_mesh() {
         }
     }
 
-    return MetaballBufferData { std::move(vertex_buffer), std::move(index_buffer) };
+    return MetaballBufferData { std::move(vertex_buffer), std::move(normal_buffer), std::move(index_buffer) };
 }
 
 int render_field() {
