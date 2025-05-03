@@ -260,6 +260,61 @@ struct control_point_t {
     bool active;
 };
 
+// template <size_t CPC, size_t CPR, size_t CPL, typename ImplicitFunction>
+// Array3D<control_point_t, CPC + 1, CPR + 1, CPL + 1> get_control_points(
+//     const glm::vec3& CENTER,
+//     const float CUBE_SIZE, 
+//     const float ISOVALUE, 
+//     ImplicitFunction F
+// ) {
+//     constexpr size_t LAYERS = CPL + 1;
+//     constexpr size_t ROWS   = CPR + 1;
+//     constexpr size_t COLS   = CPC + 1;
+
+//     const glm::vec3 top_left = CENTER - glm::vec3(COLS, -1 * ((float)ROWS), LAYERS) * CUBE_SIZE / 2.f;
+
+//     // std::cout << "top left is: ";
+//     // print_vec(top_left);
+
+
+//     // OBSERVATION: we're only concerned with two "layers" at a time
+//     // assumption: the cube construct is centered around certain x & y  coords
+//     Array3D<control_point_t, COLS, ROWS, LAYERS> cube_vertices;
+
+//     glm::vec3 cube_tl = top_left;
+//     for (size_t layer = 0; layer < LAYERS; layer++) {
+//         cube_tl.y = top_left.y;
+//         for (size_t row = 0; row < ROWS; row++) {
+//             cube_tl.x = top_left.x;
+//             for (size_t col = 0; col < COLS; col++) {
+
+//                 const glm::vec3 v_pos = top_left + cube_tl;
+//                 const float density = F(v_pos);
+//                 cube_vertices[layer][row][col] = control_point_t {
+//                     cube_tl,
+//                     density,
+//                     density >= ISOVALUE
+//                 };
+
+//                 cube_tl.x += CUBE_SIZE;
+//             }
+//             cube_tl.y -= CUBE_SIZE;
+//         }
+//         cube_tl.z += CUBE_SIZE;
+//     }
+
+//     return cube_vertices;
+// }
+
+template <typename ImplicitFunction>
+glm::vec3 gradient_at(const glm::vec3& p, ImplicitFunction f, float eps = 1e-3f) {
+    return glm::normalize(glm::vec3(
+        f(p + glm::vec3(eps, 0, 0)) - f(p - glm::vec3(eps, 0, 0)),
+        f(p + glm::vec3(0, eps, 0)) - f(p - glm::vec3(0, eps, 0)),
+        f(p + glm::vec3(0, 0, eps)) - f(p - glm::vec3(0, 0, eps))
+    ));
+}
+
 template <size_t CPC, size_t CPR, size_t CPL, typename ImplicitFunction>
 Array3D<control_point_t, CPC + 1, CPR + 1, CPL + 1> get_control_points(
     const glm::vec3& CENTER,
@@ -270,37 +325,22 @@ Array3D<control_point_t, CPC + 1, CPR + 1, CPL + 1> get_control_points(
     constexpr size_t LAYERS = CPL + 1;
     constexpr size_t ROWS   = CPR + 1;
     constexpr size_t COLS   = CPC + 1;
+    const glm::vec3 grid_min = CENTER - glm::vec3(CPC, CPR, CPL) * CUBE_SIZE * 0.5f;
 
-    const glm::vec3 top_left = CENTER - glm::vec3(COLS, -1 * ((float)ROWS), LAYERS) * CUBE_SIZE / 2.f;
-
-    // std::cout << "top left is: ";
-    // print_vec(top_left);
-
-
-    // OBSERVATION: we're only concerned with two "layers" at a time
-    // assumption: the cube construct is centered around certain x & y  coords
     Array3D<control_point_t, COLS, ROWS, LAYERS> cube_vertices;
 
-    glm::vec3 cube_tl = top_left;
-    for (size_t layer = 0; layer < LAYERS; layer++) {
-        cube_tl.y = top_left.y;
-        for (size_t row = 0; row < ROWS; row++) {
-            cube_tl.x = top_left.x;
-            for (size_t col = 0; col < COLS; col++) {
-
-                const glm::vec3 v_pos = top_left + cube_tl;
-                const float density = F(v_pos);
-                cube_vertices[layer][row][col] = control_point_t {
-                    cube_tl,
+    for (size_t z = 0; z < LAYERS; ++z) {
+        for (size_t y = 0; y < ROWS; ++y) {
+            for (size_t x = 0; x < COLS; ++x) {
+                glm::vec3 pos = grid_min + glm::vec3(x, y, z) * CUBE_SIZE;
+                float density = F(pos);
+                cube_vertices[z][y][x] = control_point_t{
+                    pos,
                     density,
                     density >= ISOVALUE
                 };
-
-                cube_tl.x += CUBE_SIZE;
             }
-            cube_tl.y -= CUBE_SIZE;
         }
-        cube_tl.z += CUBE_SIZE;
     }
 
     return cube_vertices;
@@ -490,6 +530,12 @@ ArrayCube<control_point_t, 11> get_metaball_control_points(const float isovalue)
         isovalue,
         metaball_func
     );
+
+    std::cout << "top left: ";
+    print_vec(c[0][0][0].pos);
+    std::cout << "\nbottom right: ";
+    print_vec(c[10][10][10].pos);
+    std::cout << std::endl;
     
     return c;
 }
@@ -518,8 +564,7 @@ std::array<glm::vec3, 12> calc_edge_lerps(
 
     while (edge_mask != 0 && bit_index < 12) {
         //uint8_t bit = (edge_mask & 0x1);
-        
-        //if (bit) {
+    
         int e1 = edge_mappings[bit_index][0];
         int e2 = edge_mappings[bit_index][1];
 
@@ -532,7 +577,6 @@ std::array<glm::vec3, 12> calc_edge_lerps(
         float denom = V2 - V1;
         if (std::abs(denom) < 1e-6f) denom = 1e-6f;
         lerp_set[bit_index] = P1 + (isovalue - V1) * (P2 - P1) / denom;
-        //}
 
         //edge_mask = edge_mask >> 1;
         bit_index += 1;
@@ -547,7 +591,7 @@ struct MetaballBufferData {
 };
 
 MetaballBufferData construct_metaball_mesh() {
-    const float ISOVALUE = 1.0f;
+    const float ISOVALUE = 2.0f;
     std::vector<glm::vec3> vertex_buffer;
     std::vector<uint32_t> index_buffer;
 
@@ -561,7 +605,7 @@ MetaballBufferData construct_metaball_mesh() {
                 const int cube_edge_mask = edge_masks[cube_index];
                 const std::array<glm::vec3, 12> lerp_points = calc_edge_lerps(cube_cpts, ISOVALUE, cube_edge_mask);
 
-                std::cout << "Cube #" << cube_index << " produces " 
+                std::cout << "Cube #" << (int) cube_index << " produces " 
                     << (triTable[cube_index][0] == -1 ? 0 : 1) << " triangle set(s)\n";
 
                 int edge_index = 0;
@@ -591,6 +635,106 @@ MetaballBufferData construct_metaball_mesh() {
     return MetaballBufferData { std::move(vertex_buffer), std::move(index_buffer) };
 }
 
+int render_field() {
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    const float ISOVALUE = 1.5f;
+
+    ArrayCube<control_point_t, 11> cpts = get_metaball_control_points(ISOVALUE);
+
+    ArrayCube<uint8_t, 10> tri_index = get_cube_bits(cpts);
+    ArrayCube<glm::vec3, 10> cube_midpoints = average_cube_pts(cpts);
+    ArrayCube<glm::vec4, 10> points = join_isosurface_arrays(tri_index, cube_midpoints);
+
+    std::vector<glm::vec4> vertices;
+    for (size_t i = 0; i < 10; i++) {
+        for (size_t j = 0; j < 10; j++) {
+            for (size_t k = 0; k < 10; k++) {
+                vertices.push_back(points[i][j][k]);
+                print_vec(points[i][j][k]);
+                std::cout << std::endl;
+            } 
+        }
+    }
+
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Simple Cube").open();
+
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec4), vertices.data(), GL_STATIC_DRAW);
+
+    // GLuint ebo;
+    // glGenBuffers(1, &ebo);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    std::cout << "loading shaders" << std::endl;
+
+    Shader s = Shader::from_file(
+        "./src/shaders/vertex/point_cloud.vert",
+        "./src/shaders/fragment/point_cloud.frag"
+    ).value();
+
+    std::cout << "setting attribs" << std::endl;
+
+    GLuint program = s.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+
+    glVertexAttribPointer(vpos_location, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
+    glEnableVertexAttribArray(vpos_location);
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
+
+    float lastFrame = 0.0f;
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    std::cout << "render loop" << std::endl;
+
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        process_input(win, deltaTime);
+
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        float angle = (float)glfwGetTime();
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0));
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view * model;
+
+        s.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        s.ping_all_uniforms().use();
+        glBindVertexArray(vao);
+        glDrawArrays(GL_POINTS, 0, vertices.size());
+
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+
+    glfwDestroyWindow(win);
+    glfwTerminate();
+    return EXIT_SUCCESS;
+}
+
 int t4() {
     const int SCREEN_WIDTH = 640;
     const int SCREEN_HEIGHT = 480;
@@ -600,14 +744,14 @@ int t4() {
     const std::vector<glm::vec3>& vertices = mbd.vertex_buffer;
     const std::vector<uint32_t>& indices = mbd.index_buffer;
 
-    // int count = 0;
-    // for (const glm::vec3& v : vertices) {
-    //     if (count % 3 == 0) {
-    //         std::cout << std::endl;
-    //     }
-    //     print_vec(v);
-    //     count += 1;;
-    // }
+    int count = 0;
+    for (const glm::vec3& v : vertices) {
+        if (count % 3 == 0) {
+            std::cout << std::endl;
+        }
+        print_vec(v);
+        count += 1;;
+    }
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
