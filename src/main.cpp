@@ -840,9 +840,107 @@ int t4() {
     glfwTerminate();
     return EXIT_SUCCESS;
 }
+
+int t5() {
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes Example").open();
+    
+    MetaballBufferData mbd = construct_metaball_mesh();
+    const std::vector<glm::vec3>& vertices = mbd.vertex_buffer;
+    const std::vector<uint32_t>& indices = mbd.index_buffer;
+    const std::vector<glm::vec3>& normals = mbd.normal_buffer;
+
+    std::vector<float> vertex_data;
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        const glm::vec3& p = vertices[i];
+        const glm::vec3& n = normals[i];
+        vertex_data.insert(vertex_data.end(), { p.x, p.y, p.z, n.x, n.y, n.z });
+    }
+
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), vertex_data.data(), GL_STATIC_DRAW);
+
+    GLuint ebo;
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+
+    Shader s = Shader::from_file(
+        "./src/shaders/vertex/vertex_lighting.vert",
+        "./src/shaders/fragment/vertex_lighting.frag"
+    ).value();
+
+    s.add_uniform("lightPos", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(10.f, 10.f, 10.f)[0]);
+    });
+
+    GLuint program = s.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+    const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
+
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, 0);
+    glEnableVertexAttribArray(vpos_location);
+
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(vnorm_location);
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
+
+    float lastFrame = 0.0f;
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    std::cout << "render loop" << std::endl;
+
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        process_input(win, deltaTime);
+
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        float angle = (float)glfwGetTime();
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0));
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view * model;
+
+        s.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        s.ping_all_uniforms().use();
+        glBindVertexArray(vao);
+        glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+
+    glfwDestroyWindow(win);
+    glfwTerminate();
+    return EXIT_SUCCESS;
+}
  
 int main() {
-    t4();
+    t5();
     // std::cout << "\nExiting." << std::endl;
     return EXIT_SUCCESS;
 }
