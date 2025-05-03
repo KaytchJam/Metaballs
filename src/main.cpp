@@ -70,8 +70,8 @@ struct MetaballSceneViewer {
 template<size_t SCENES>
 using MSV = MetaballSceneViewer<SCENES>;
 
-MSV<5> setup_scenes() {
-    MSV<5> mball_scenes;
+MSV<6> setup_scenes() {
+    MSV<6> mball_scenes;
 
     mball_scenes.mball_color[0] = glm::vec3(0.f, 0.f, 1.f);
     MetaballEngine* m = &mball_scenes.scenes[0];
@@ -92,9 +92,15 @@ MSV<5> setup_scenes() {
     m->add_metaball(glm::vec3(1.2f), tune_cube(1.f, 1.f, 1.f, 0.f));
     m->add_metaball(glm::vec3(1.9f), tune_blob(1.f, 2.f, 3.f));
 
-    mball_scenes.mball_color[4] = glm::vec3(1.f, 0.f, 1.f);
+    mball_scenes.mball_color[4] = glm::vec3(0.8f, 0.8f, 0.8f);
     m = &mball_scenes.scenes[4];
     m->add_metaball(glm::vec3(0.0f), tune_wave());
+
+    mball_scenes.mball_color[5] = glm::vec3(0.8f, 0.1f, 0.6f);
+    m = &mball_scenes.scenes[5];
+    m->add_metaball(glm::vec3(0.0f), tune_blob(1.f, 1.f, 1.f));
+    m->add_metaball(glm::vec3(0.4f, 0.5f, 0.1f), tune_cube(1.f, 1.f, 1.f, 0.f));
+    m->add_metaball(glm::vec3(-0.3f, 2.1f, 1.4f), tune_cube(1.f, 1.f, 1.f, 0.f));
 
     return mball_scenes;
 }
@@ -113,7 +119,7 @@ int metaball_scenes() {
     const int SCREEN_HEIGHT = 480;
     GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes Example").open();
 
-    MSV<5> scenes = setup_scenes();
+    MSV<6> scenes = setup_scenes();
     MetaballEngine* me = &scenes.get_current_scene();
     size_t prev_scene = scenes.scene_at;
 

@@ -4,7 +4,7 @@
 
 Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the build folder.
 
-For this project I implemented Marching Cubes along with various Metaballs.
+For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using GLFW, GLAD, and GLM. When you run the project you can click left and right to change the scene of metaballs on display.
 
 #### References:
 
