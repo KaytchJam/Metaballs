@@ -6,6 +6,13 @@ Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the b
 
 For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using GLFW, GLAD, and GLM. When you run the project you can click left and right to change the scene of metaballs on display.
 
+### Basic Features
+
+- Function to Mesh Conversion via Marching Cubes
+- Metaball Mesh Generation
+- Metaball Normal Generation
+- Diffuse Lighting / Shading
+
 ### Update: 5 / 3 / 2025 (10:09 PM)
 
 - Minor optimizations to increase speed

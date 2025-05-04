@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <array>
+// #include <ratio>
 
 #include "utils/Vector3D.hpp"
 #include "MarchingCubes.hpp"
@@ -28,10 +29,12 @@ typedef struct control_point_t {
 } ctrl_pt_t;
 
 struct Metaball {
+    float sign;
     glm::vec3 position;
     MetaFunction func;
 };
 
+template<size_t GRID_SIZE>
 class MetaballEngine {
 private:
     Vector3D<ctrl_pt_t> ctrl_pts;
@@ -40,7 +43,6 @@ private:
     std::vector<GLuint> indices;
     float isovalue = 1.f;
 
-    static constexpr size_t GRID_SIZE = 60;
     static constexpr float CUBE_SIZE = 1.f / 10.f;
 
     static float blob_simple(const glm::vec3& center, const glm::vec3& pt) {
@@ -50,7 +52,7 @@ private:
     float compute_all(const glm::vec3& pt) const {
         float sum = 0.f;
         for (const Metaball& m : metaballs) {
-            sum += m.func(m.position, pt);
+            sum += m.sign * m.func(m.position, pt);
         }
         return sum;
     }
@@ -182,31 +184,34 @@ private:
             for (size_t j = 0; j < GRID_SIZE; j++) {
                 for (size_t i = 0; i < GRID_SIZE; i++) {
                     const uint8_t cube_index = MetaballEngine::compute_cube_index(ctrl_pts, glm::ivec3(i, j, k));
-                    const std::array<control_point_t, 8> cube_cpts = MetaballEngine::get_cube_cpts(ctrl_pts, i, j, k);
-                    const int cube_edge_mask = edge_masks[cube_index];
-                    const std::array<glm::vec3, 12> lerp_points = MetaballEngine::calc_edge_lerps(
-                        cube_cpts, this->isovalue, cube_edge_mask);
 
-                    int edge_index = 0;
-                    while (triTable[cube_index][edge_index] != -1 && edge_index + 2 < 16) {
-
-                        const glm::vec3& p0 = lerp_points[triTable[cube_index][edge_index]];
-                        const glm::vec3& p1 = lerp_points[triTable[cube_index][edge_index+1]];
-                        const glm::vec3& p2 = lerp_points[triTable[cube_index][edge_index+2]];
-
-                        // update vertices & normals
-                        const uint32_t base_index = (uint32_t) this->vertices.size();
-                        this->vertices.push_back(Vertex{ p0, -gradient_all(p0)});
-                        this->vertices.push_back(Vertex{ p1, -gradient_all(p1)});
-                        this->vertices.push_back(Vertex{ p2, -gradient_all(p2)});
-
-                        // update indices
-                        this->indices.push_back(base_index);
-                        this->indices.push_back(base_index + 1);
-                        this->indices.push_back(base_index + 2);
-
-                        edge_index += 3;
-                    }
+                    if (cube_index != 0x0 && cube_index != 0xFF) {
+                        const std::array<control_point_t, 8> cube_cpts = MetaballEngine::get_cube_cpts(ctrl_pts, i, j, k);
+                        const int cube_edge_mask = edge_masks[cube_index];
+                        const std::array<glm::vec3, 12> lerp_points = MetaballEngine::calc_edge_lerps(
+                            cube_cpts, this->isovalue, cube_edge_mask);
+    
+                        int edge_index = 0;
+                        while (triTable[cube_index][edge_index] != -1 && edge_index + 2 < 16) {
+    
+                            const glm::vec3& p0 = lerp_points[triTable[cube_index][edge_index]];
+                            const glm::vec3& p1 = lerp_points[triTable[cube_index][edge_index+1]];
+                            const glm::vec3& p2 = lerp_points[triTable[cube_index][edge_index+2]];
+    
+                            // update vertices & normals
+                            const uint32_t base_index = (uint32_t) this->vertices.size();
+                            this->vertices.push_back(Vertex{ p0, -gradient_all(p0)});
+                            this->vertices.push_back(Vertex{ p1, -gradient_all(p1)});
+                            this->vertices.push_back(Vertex{ p2, -gradient_all(p2)});
+    
+                            // update indices
+                            this->indices.push_back(base_index);
+                            this->indices.push_back(base_index + 1);
+                            this->indices.push_back(base_index + 2);
+    
+                            edge_index += 3;
+                        }
+                    } 
                 }
             }
         }
@@ -225,7 +230,13 @@ public:
 
     size_t add_metaball(const glm::vec3& center, const MetaFunction& f = MetaballEngine::blob_simple) {
         size_t metaball_index = this->metaballs.size();
-        this->metaballs.push_back(Metaball{center, std::move(f)});
+        this->metaballs.push_back(Metaball{1.f, center, std::move(f)});
+        return metaball_index;
+    }
+
+    size_t subtract_metaball(const glm::vec3& center, const MetaFunction& f = MetaballEngine::blob_simple) {
+        size_t metaball_index = this->metaballs.size();
+        this->metaballs.push_back(Metaball{-1.f, center, std::move(f)});
         return metaball_index;
     }
 

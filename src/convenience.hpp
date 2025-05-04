@@ -50,7 +50,14 @@ float lastX = 320, lastY = 240;
 bool firstMouse = true;
 
 void mouse_callback(GLFWwindow* window, double xpos_d, double ypos_d) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
+        firstMouse = true;
+    }
+
     if (glfwGetWindowAttrib(window, GLFW_HOVERED) == GLFW_FALSE)
+        return;
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != GLFW_PRESS)
         return;
 
     const float xpos = (float) xpos_d;
@@ -131,18 +138,18 @@ Chest<GLFWwindow*> setup(int length, int width, const char* name) {
 auto tune_blob(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f) {
     return [c1, c2, c3](const glm::vec3& center, const glm::vec3& pt) -> float {
         return 1.f / (
-        c1 * std::powf(center.x - pt.x, 2) + 
-        c2 * std::powf(center.y - pt.y, 2) + 
-        c3 * std::powf(center.z - pt.z, 2));
+        c1 * (float) std::pow(center.x - pt.x, 2) + 
+        c2 * (float) std::pow(center.y - pt.y, 2) + 
+        c3 * (float) std::pow(center.z - pt.z, 2));
     };
 }
 
 auto tune_cube(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f, float eps = 0.f) {
     return [c1, c2, c3, eps](const glm::vec3& center, const glm::vec3& pt) -> float {
         return 1.f / (
-            c1 * std::powf(center.x - pt.x, 4) + 
-            c2 * std::powf(center.y - pt.y, 4) + 
-            c3 * std::powf(center.z - pt.z, 4) +
+            c1 * (float) std::pow(center.x - pt.x, 4) + 
+            c2 * (float) std::pow(center.y - pt.y, 4) + 
+            c3 * (float) std::pow(center.z - pt.z, 4) +
             eps
         );
     };
@@ -157,7 +164,7 @@ auto tune_gyroid(float a1 = 1.f, float a2 = 1.f, float a3 = 1.f) {
 
 auto tune_cross(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f) {
     return [c1, c2, c3](const glm::vec3& center, const glm::vec3& pt) -> float {
-        return c1/std::powf(center.x - pt.x, 2) + c2/std::powf(center.y - pt.y, 2) + c3/std::powf(center.z - pt.z, 2);
+        return c1/ ((float) std::pow(center.x - pt.x, 2)) + c2/ ((float) std::pow(center.y - pt.y, 2)) + c3/ ((float) std::pow(center.z - pt.z, 2));
     };
 }
 
@@ -177,6 +184,6 @@ auto tune_star(float scale = 1.f) {
 auto tune_paraboliod(float a1 = 1.f, float a2 = 1.f, float a3 = 1.f, float thickness = 1.f) {
     using namespace std;
     return [a1, a2, a3, thickness](const glm::vec3& center, const glm::vec3& pt) -> float {
-        return (float) abs( thickness / (powf((center.x - pt.x) * a1, 2) + powf((center.z - pt.z) * a2, 2) + a3 * (center.y - pt.y)));
+        return (float) abs( thickness / (pow((center.x - pt.x) * a1, 2) + pow((center.z - pt.z) * a2, 2) + a3 * (center.y - pt.y)));
     };
 }
