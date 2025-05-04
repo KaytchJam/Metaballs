@@ -128,8 +128,8 @@ Chest<GLFWwindow*> setup(int length, int width, const char* name) {
     return winchest;
 }
 
-auto tune_blob(float c1, float c2, float c3) {
-    return [c1, c2, c3](const glm::vec3& center, const glm::vec3& pt) {
+auto tune_blob(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f) {
+    return [c1, c2, c3](const glm::vec3& center, const glm::vec3& pt) -> float {
         return 1.f / (
         c1 * std::powf(center.x - pt.x, 2) + 
         c2 * std::powf(center.y - pt.y, 2) + 
@@ -137,8 +137,8 @@ auto tune_blob(float c1, float c2, float c3) {
     };
 }
 
-auto tune_cube(float c1, float c2, float c3, float eps) {
-    return [c1, c2, c3, eps](const glm::vec3& center, const glm::vec3& pt) {
+auto tune_cube(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f, float eps = 0.f) {
+    return [c1, c2, c3, eps](const glm::vec3& center, const glm::vec3& pt) -> float {
         return 1.f / (
             c1 * std::powf(center.x - pt.x, 4) + 
             c2 * std::powf(center.y - pt.y, 4) + 
@@ -148,9 +148,35 @@ auto tune_cube(float c1, float c2, float c3, float eps) {
     };
 }
 
-auto tune_wave() {
+auto tune_gyroid(float a1 = 1.f, float a2 = 1.f, float a3 = 1.f) {
     using namespace std;
-    return [](const glm::vec3& center, const glm::vec3& pt) {
-        return sin(pt.x)*cos(pt.y)+sin(pt.y)*cos(pt.z)+sin(pt.z)*cos(pt.x);
+    return [a1, a2, a3](const glm::vec3& center, const glm::vec3& pt) -> float {
+        return a1 * sin(pt.x)*cos(pt.y) + a2 * sin(pt.y)*cos(pt.z) + a3 * sin(pt.z)*cos(pt.x);
+    };
+}
+
+auto tune_cross(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f) {
+    return [c1, c2, c3](const glm::vec3& center, const glm::vec3& pt) -> float {
+        return c1/std::powf(center.x - pt.x, 2) + c2/std::powf(center.y - pt.y, 2) + c3/std::powf(center.z - pt.z, 2);
+    };
+}
+
+auto tune_plane(float c1 = 1.f, float c2 = 1.f, float c3 = 1.f, float offset = 1.f) {
+    return [c1, c2, c3, offset](const glm::vec3& center, const glm::vec3& pt) -> float {
+        return c1 * (center.x - pt.x) + c2 * (center.y - pt.y) + c3 * (center.z - pt.z) + offset;
+    };
+}
+
+auto tune_star(float scale = 1.f) {
+    using namespace std;
+    return [scale](const glm::vec3& center, const glm::vec3& pt) -> float {
+        return scale / abs((center.x - pt.x) * (center.y - pt.y));
+    };
+}
+
+auto tune_paraboliod(float a1 = 1.f, float a2 = 1.f, float a3 = 1.f, float thickness = 1.f) {
+    using namespace std;
+    return [a1, a2, a3, thickness](const glm::vec3& center, const glm::vec3& pt) -> float {
+        return (float) abs( thickness / (powf((center.x - pt.x) * a1, 2) + powf((center.z - pt.z) * a2, 2) + a3 * (center.y - pt.y)));
     };
 }

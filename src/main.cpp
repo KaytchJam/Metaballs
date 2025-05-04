@@ -75,8 +75,10 @@ struct MetaballSceneViewer {
 template<size_t SCENES>
 using MSV = MetaballSceneViewer<SCENES>;
 
-MSV<6> setup_scenes() {
-    MSV<6> mball_scenes;
+constexpr size_t NUM_SCENES = 10;
+
+MSV<NUM_SCENES> setup_scenes() {
+    MSV<NUM_SCENES> mball_scenes;
 
     mball_scenes.mball_color[0] = glm::vec3(0.f, 0.f, 1.f);
     MetaballEngine* m = &mball_scenes.scenes[0];
@@ -90,22 +92,42 @@ MSV<6> setup_scenes() {
 
     mball_scenes.mball_color[2] = glm::vec3(1.f, 0.f, 0.f);
     m = &mball_scenes.scenes[2];
-    m->add_metaball(glm::vec3(0.f), tune_cube(1.f, 1.f, 1.f, 0.f));
+    m->add_metaball(glm::vec3(0.f), tune_cube());
 
     mball_scenes.mball_color[3] = glm::vec3(1.f, 0.f, 1.f);
     m = &mball_scenes.scenes[3];
-    m->add_metaball(glm::vec3(1.2f), tune_cube(1.f, 1.f, 1.f, 0.f));
+    m->add_metaball(glm::vec3(1.2f), tune_cube());
     m->add_metaball(glm::vec3(1.9f), tune_blob(1.f, 2.f, 3.f));
 
     mball_scenes.mball_color[4] = glm::vec3(0.8f, 0.8f, 0.8f);
     m = &mball_scenes.scenes[4];
-    m->add_metaball(glm::vec3(0.0f), tune_wave());
+    m->add_metaball(glm::vec3(0.0f), tune_gyroid());
 
     mball_scenes.mball_color[5] = glm::vec3(0.8f, 0.1f, 0.6f);
     m = &mball_scenes.scenes[5];
-    m->add_metaball(glm::vec3(0.0f), tune_blob(1.f, 1.f, 1.f));
-    m->add_metaball(glm::vec3(0.4f, 0.5f, 0.1f), tune_cube(1.f, 1.f, 1.f, 0.f));
-    m->add_metaball(glm::vec3(-0.3f, 2.1f, 1.4f), tune_cube(1.f, 1.f, 1.f, 0.f));
+    m->add_metaball(glm::vec3(0.0f), tune_blob());
+    m->add_metaball(glm::vec3(0.4f, 0.5f, 0.1f), tune_cube());
+    m->add_metaball(glm::vec3(-0.3f, 2.1f, 1.4f), tune_cube());
+
+    mball_scenes.mball_color[6] = glm::vec3(0.2, 0.9, 0.8);
+    m = &mball_scenes.scenes[6];
+    m->add_metaball(glm::vec3(0.0f), tune_cross(0.05f, 0.05f, 0.f));
+    m->add_metaball(glm::vec3(0.0f), tune_plane(0.f, 1.f, 0.f, 0.f));
+
+    mball_scenes.mball_color[7] = glm::vec3(1.0, 0.9, 0.2);
+    m = &mball_scenes.scenes[7];
+    m->add_metaball(glm::vec3(0.0f, 0.5f, 0.f), tune_blob());
+    m->add_metaball(glm::vec3(0.0f), tune_plane(0.f, 1.f, 0.f, 1.f));
+
+    mball_scenes.mball_color[8] = glm::vec3(0.0, 0.4, 0.5);
+    m = &mball_scenes.scenes[8];
+    m->add_metaball(glm::vec3(0.0f), tune_gyroid(0.f, 0.f, 1.f));
+    m->add_metaball(glm::vec3(0.5, 0.f, 0.f), tune_paraboliod());
+    m->add_metaball(glm::vec3(0.f), tune_plane(0.f, 1.f, 0.f));
+
+    mball_scenes.mball_color[9] = glm::vec3(0.2, 0.2, 0.2);
+    m = &mball_scenes.scenes[9];
+    m->add_metaball(glm::vec3(0.0f), tune_star(2.f));
 
     return mball_scenes;
 }
@@ -124,7 +146,7 @@ int metaball_scenes() {
     const int SCREEN_HEIGHT = 480;
     GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes Example").open();
 
-    MSV<6> scenes = setup_scenes();
+    MSV<NUM_SCENES> scenes = setup_scenes();
     MetaballEngine* me = &scenes.get_current_scene();
     size_t prev_scene = scenes.scene_at;
 
