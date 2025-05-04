@@ -20,16 +20,21 @@
 #include "Shader.hpp"
 #include "Metaball.hpp"
 
-void re_render_metaball_engine(MetaballEngine& me, GLuint& vbo, GLuint& ebo) {
+struct MeshView {
+    const std::vector<Vertex>* vertex_data;
+    const std::vector<GLuint>* indices;
+};
+
+void re_render_metaball_engine(MetaballEngine& me, MeshView& mview, GLuint& vbo, GLuint& ebo) {
     me.refresh();
-    const std::vector<Vertex>& vertex_data = me.get_vertices();
-    const std::vector<GLuint>& indices = me.get_indices();
+    mview.vertex_data = &me.get_vertices();
+    mview.indices = &me.get_indices();
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(Vertex), vertex_data.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mview.vertex_data->size() * sizeof(Vertex), mview.vertex_data->data(), GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mview.indices->size() * sizeof(GLuint), mview.indices->data(), GL_DYNAMIC_DRAW);
 }
 
 template<size_t SCENES>
@@ -123,8 +128,7 @@ int metaball_scenes() {
     MetaballEngine* me = &scenes.get_current_scene();
     size_t prev_scene = scenes.scene_at;
 
-    const std::vector<Vertex>* vertex_data = &me->get_vertices();
-    const std::vector<GLuint>* indices = &me->get_indices();
+    MeshView mv = MeshView { &me->get_vertices(), &me->get_indices() };
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -133,12 +137,12 @@ int metaball_scenes() {
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertex_data->size() * sizeof(Vertex), vertex_data->data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mv.vertex_data->size() * sizeof(Vertex), mv.vertex_data->data(), GL_STATIC_DRAW);
 
     GLuint ebo;
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices->size() * sizeof(GLuint), indices->data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mv.indices->size() * sizeof(GLuint), mv.indices->data(), GL_STATIC_DRAW);
 
     Shader s = Shader::from_file(
         "./src/shaders/vertex/vertex_lighting.vert",
@@ -187,9 +191,7 @@ int metaball_scenes() {
 
         if (scenes.scene_at != prev_scene) {
             prev_scene = scenes.scene_at;
-            re_render_metaball_engine(scenes.get_current_scene(), vbo, ebo);
-            indices = &scenes.get_current_scene().get_indices();
-            vertex_data = &scenes.get_current_scene().get_vertices();
+            re_render_metaball_engine(scenes.get_current_scene(), mv, vbo, ebo);
 
             s.add_uniform("color", [&scenes](GLuint pgrm, GLint loc) {
                 glUniform3fv(loc, 1, &scenes.get_current_color()[0]);
@@ -212,7 +214,7 @@ int metaball_scenes() {
         
         s.ping_all_uniforms().use();
         glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, (GLsizei) indices->size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, (GLsizei) mv.indices->size(), GL_UNSIGNED_INT, 0);
 
         glfwPollEvents();
         glfwSwapBuffers(win);
