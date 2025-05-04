@@ -148,7 +148,7 @@ int metaball_scenes() {
 
     MSV<NUM_SCENES> scenes = setup_scenes();
     MetaballEngine* me = &scenes.get_current_scene();
-    size_t prev_scene = scenes.scene_at;
+    size_t prev_scene = NUM_SCENES + 1;
 
     MeshView mv = MeshView { &me->get_vertices(), &me->get_indices() };
 
@@ -183,7 +183,7 @@ int metaball_scenes() {
     const GLint vpos_location = glGetAttribLocation(program, "pPos");
     const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
 
-    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
     glEnableVertexAttribArray(vpos_location);
 
