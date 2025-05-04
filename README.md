@@ -12,6 +12,7 @@ For this project I implemented Marching Cubes along with various Metaballs. The 
 - Metaball Mesh Generation
 - Metaball Normal Generation
 - Diffuse Lighting / Shading
+- Camera Controls (camera moves on drag)
 
 ### Update: 5 / 3 / 2025 (10:09 PM)
 
