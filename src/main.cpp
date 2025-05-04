@@ -188,8 +188,8 @@ int metaball_scenes() {
         if (scenes.scene_at != prev_scene) {
             prev_scene = scenes.scene_at;
             re_render_metaball_engine(scenes.get_current_scene(), vbo, ebo);
-            indices = scenes.get_current_scene().get_indices();
-            vertex_data = scenes.get_current_scene().get_vertices();
+            indices = std::move(scenes.get_current_scene().get_indices());
+            vertex_data = std::move(scenes.get_current_scene().get_vertices());
 
             s.add_uniform("color", [&scenes](GLuint pgrm, GLint loc) {
                 glUniform3fv(loc, 1, &scenes.get_current_color()[0]);
