@@ -34,6 +34,7 @@ struct Metaball {
 
 class MetaballEngine {
 private:
+    Vector3D<ctrl_pt_t> ctrl_pts;
     std::vector<Metaball> metaballs;
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -170,7 +171,6 @@ private:
 
     MetaballEngine& build_mesh() {
         // since grid size is constant we'll just reuse the same buffer
-        Vector3D<ctrl_pt_t> ctrl_pts(GRID_SIZE + 1);
         // Vector3D<uint8_t> cube_bits(GRID_SIZE);
         this->vertices.clear();
         this->indices.clear();
@@ -216,7 +216,7 @@ private:
     }
 
 public:
-    MetaballEngine() {}
+    MetaballEngine() : ctrl_pts(GRID_SIZE + 1) { }
 
     MetaballEngine& set_isovalue(float isoval = 1.0f) {
         this->isovalue = isoval;
