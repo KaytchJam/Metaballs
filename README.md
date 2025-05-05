@@ -14,7 +14,7 @@ For this project I implemented Marching Cubes along with various Metaballs. The 
 - Diffuse Lighting / Shading
 - Camera Controls (camera moves on drag)
 
-### Update: 5 / 3 / 2025 (10:09 PM)
+### Update: 5/3/2025 (10:09 PM)
 
 - Minor optimizations to increase speed
     - Instead of reallocating space for the Vector3D<ctrl_pt_t> buffer on each `refresh()` call, I instead maintain a buffer field in MetaballEngine.
