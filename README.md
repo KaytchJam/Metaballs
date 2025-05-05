@@ -19,6 +19,7 @@ For this project I implemented Marching Cubes along with various Metaballs. The 
 - Minor optimizations to increase speed
     - Instead of reallocating space for the Vector3D<ctrl_pt_t> buffer on each `refresh()` call, I instead maintain a buffer field in MetaballEngine.
     - Using `MeshView` instead of copying the meshes in the render loop
+    - Skipping cubes that produce a bitfield of `0x0` or `0xFF` (0 and 255 are "empty space")
 
 - If I really want to speed this up I need to resort to some kind of caching of Vertices
 
