@@ -128,7 +128,7 @@ Chest<GLFWwindow*> setup(int length, int width, const char* name) {
         glfwSwapInterval(1);
         glfwSetCursorPosCallback(win, mouse_callback);
         glfwSetErrorCallback(error_callback);
-        glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         winchest = Chest<GLFWwindow*>::stuff(win);
     }
 

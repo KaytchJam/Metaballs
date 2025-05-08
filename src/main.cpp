@@ -203,6 +203,7 @@ int metaball_scenes() {
     float lastFrame = 0.0f;
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE ); uncomment to see all the individual vertices
 
     while (!glfwWindowShouldClose(win)) {
         float currentFrame = (float) glfwGetTime();
@@ -262,7 +263,6 @@ int animation_test() {
 
     Metaball& animated = me.get_metaball(m2);
     Metaball& anim2 = me.get_metaball(m3);
-    // translation here
 
     MeshView mv = MeshView {&me.get_vertices(), &me.get_indices() };
 
@@ -290,7 +290,7 @@ int animation_test() {
     });
 
     s.add_uniform("color", [](GLuint pgrm, GLint loc) {
-        glUniform3fv(loc, 1, &glm::vec3(0.9f, 0.9f, 0.9f)[0]);
+        glUniform3fv(loc, 1, &glm::vec3(0.9f)[0]);
     });
 
     GLuint program = s.get_program_id();
@@ -316,6 +316,7 @@ int animation_test() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     const float FPS = 1.f / 30.f;
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     while (!glfwWindowShouldClose(win)) {
         float currentFrame = (float) glfwGetTime();
@@ -345,15 +346,24 @@ int animation_test() {
         glBindVertexArray(vao);
         re_render_metaball_engine(me, mv, vbo, ebo);
         glDrawElements(GL_TRIANGLES, (GLsizei) mv.indices->size(), GL_UNSIGNED_INT, 0);
-
+        
         glfwPollEvents();
         glfwSwapBuffers(win);
     }
-
+    
     glfwDestroyWindow(win);
     glfwTerminate();
     return EXIT_SUCCESS;
 }
+
+int main() {
+    metaball_scenes();
+    // animation_test();
+    return EXIT_SUCCESS;
+}
+
+
+// #include <ratio>
 
 // int ratio_test() {
 //     std::ratio<10, 1> my_ratio = std::ratio<10, 1>();
@@ -361,9 +371,78 @@ int animation_test() {
 
 //     return 0;
 // }
+
+// #include <iostream>
+// #include <sstream>
+// #include <string>
+
+// // T needs to be copyable
+// template <typename T>
+// void print_num_bytes(T type) {
+//     std::size_t bytes = sizeof(T);
+//     std::cout << bytes << " bytes" << std::endl;
+// }
+
+// template <typename T>
+// void print_bitstring(T type) {
+//     const std::size_t bytes = sizeof(T);
+//     const std::size_t total_bits = bytes * 8;
+//     std::size_t bits_left = bytes * 8;
+//     std::stringstream ss;
+    
+//     while (bits_left) {
+//         int bit = (int) (type & 0x1);
+//         type = type >> 1;
+//         ss << bit;
+//         bits_left -= 1;
+//     }
+    
+//     std::cout << ss.str() << std::endl;
+// }
+
+// typedef void (*callback)(int bit_idx);
+
+// // does nothing
+// void V(int bit_idx) {}
+
+// template <typename T>
+// void callback_on_ones(T type, callback C) {
+//     const size_t bytes = sizeof(T);
+//     const size_t total_bits = bytes * 8;
+//     size_t bits_left = total_bits;
+
+//     std::array<callback, 2> callback_switch = {V, C};
+
+//     while (bits_left) {
+//         int bit = (int) (type & 0x1);
+//         type = type >> 1;
+//         callback_switch[bit](static_cast<int>(total_bits - bits_left));
+//         bits_left -= 1;
+//     }
+// }
+
+// template <typename T>
+// void cback_on_ones(T type, callback C) {
+//     size_t bit_index = 0;
+//     std::array<callback, 2> cback_switch = {V, C};
+
+//     while (type) {
+//         int bit = (int) (type & 0x1);
+//         type = type >> 1;
+//         cback_switch[bit]((int) bit_index);
+//         bit_index += 1;
+//     }
+// }
+
+// void P(int bit_idx) {
+//     std::cout << "bit at bit-index: " << bit_idx << std::endl;
+// }
+
+// int main() {
+//     int n1 = 10;
+//     char c = 'a';
+//     callback_on_ones(n1, P);
+//     cback_on_ones(n1, P);
+//     return 0;
+// }
  
-int main() {
-    // metaball_scenes();
-    animation_test();
-    return EXIT_SUCCESS;
-}

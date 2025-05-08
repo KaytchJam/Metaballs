@@ -138,8 +138,8 @@ private:
         std::array<glm::vec3, 12> lerp_set = {};
 
         for (int edge = 0; edge < 12; edge++) {
-            int e1 = edge_mappings[edge][0];
-            int e2 = edge_mappings[edge][1];
+            const int e1 = edge_mappings[edge][0];
+            const int e2 = edge_mappings[edge][1];
     
             const glm::vec3& P1 = cube_cpts[e1].pos;
             const float V1 = cube_cpts[e1].density;
@@ -163,12 +163,37 @@ private:
         ));
     }
 
-    glm::vec3 gradient_all(const glm::vec3& p, float eps = 1e-3f) {
-        return glm::normalize(glm::vec3(
-            this->compute_all(p + glm::vec3(eps, 0, 0)) - this->compute_all(p - glm::vec3(eps, 0, 0)),
-            this->compute_all(p + glm::vec3(0, eps, 0)) - this->compute_all(p - glm::vec3(0, eps, 0)),
-            this->compute_all(p + glm::vec3(0, 0, eps)) - this->compute_all(p - glm::vec3(0, 0, eps))
-        ));
+    glm::vec3 compute_gradient(const glm::vec3& p, const float eps = 1e-3f) const {
+        const glm::vec3 dx = glm::vec3(eps, 0, 0);
+        const glm::vec3 dy = glm::vec3(0, eps, 0);
+        const glm::vec3 dz = glm::vec3(0, 0, eps);
+
+        const glm::vec3 pdx = p + dx;
+        const glm::vec3 mdx = p - dx;
+        const glm::vec3 pdy = p + dy;
+        const glm::vec3 mdy = p - dy;
+        const glm::vec3 pdz = p + dz;
+        const glm::vec3 mdz = p - dx;
+
+        std::array<float, 6> sns = {}; // smash & splash
+        for (const Metaball& m : metaballs) {
+            sns[0] += m.sign * m.func(m.position, pdx);
+            sns[1] += m.sign * m.func(m.position, mdx);
+            sns[2] += m.sign * m.func(m.position, pdy);
+            sns[3] += m.sign * m.func(m.position, mdy);
+            sns[4] += m.sign * m.func(m.position, pdz);
+            sns[5] += m.sign * m.func(m.position, mdz);
+        }
+
+        return glm::vec3(
+            sns[0] - sns[1],
+            sns[2] - sns[3],
+            sns[4] - sns[5]
+        );
+    }
+
+    glm::vec3 compute_normal(const glm::vec3& p, float eps = 1e-3f) {
+        return -glm::normalize(compute_gradient(p));
     }
 
     MetaballEngine& build_mesh() {
@@ -200,9 +225,9 @@ private:
     
                             // update vertices & normals
                             const uint32_t base_index = (uint32_t) this->vertices.size();
-                            this->vertices.push_back(Vertex{ p0, -gradient_all(p0)});
-                            this->vertices.push_back(Vertex{ p1, -gradient_all(p1)});
-                            this->vertices.push_back(Vertex{ p2, -gradient_all(p2)});
+                            this->vertices.push_back(Vertex{ p0, compute_normal(p0)});
+                            this->vertices.push_back(Vertex{ p1, compute_normal(p1)});
+                            this->vertices.push_back(Vertex{ p2, compute_normal(p2)});
     
                             // update indices
                             this->indices.push_back(base_index);
