@@ -41,3 +41,6 @@ William E. Lorensen and Harvey E. Cline. 1987. Marching cubes: A high resolution
 
 ![Marching Cube Metaball Example - Gyroid](./assets/mc_example_gyroid.PNG)
 
+![Marching Cube Metaball Example - Balls Multiple](./assets/mc_example_balls_multiple.png)
+
+![Marching Cube Metaball Example - Warped Plane](./assets/mc_example_plane_warped.png)
