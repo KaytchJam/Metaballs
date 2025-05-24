@@ -33,3 +33,11 @@ William E. Lorensen and Harvey E. Cline. 1987. Marching cubes: A high resolution
 
 [2] http://www.paulbourke.net/geometry/polygonise/
 
+### EXAMPLES
+
+![Marching Cube Metaball Example - Cube](./assets/mc_example_cube.PNG)
+
+![Marching Cube Metaball Example - Ball plus Cube](./assets/mc_example_cube_plus_ball.PNG)
+
+![Marching Cube Metaball Example - Gyroid](./assets/mc_example_gyroid.PNG)
+
