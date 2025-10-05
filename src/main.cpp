@@ -1,20 +1,16 @@
-#include <iostream>
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <array>
 #include <vector>
 
-#include "dependencies/glm/glm.hpp"
 #include "dependencies/glm/ext/matrix_clip_space.hpp"
 #include "dependencies/glm/ext/matrix_transform.hpp"
 #include "dependencies/glm/gtc/type_ptr.hpp"
 
 #include "dependencies/glfw-3.4/deps/glad/gl.h"
 #include "dependencies/glfw-3.4/include/GLFW/glfw3.h"
-
-#include "utils/Chest.hpp"
-#include "utils/NumericRange.hpp"
 
 #include "convenience.hpp"
 #include "Shader.hpp"

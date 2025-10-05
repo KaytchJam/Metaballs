@@ -6,6 +6,7 @@ project(metaballs)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(DEP_DIR src/dependencies)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # adding glfw
 add_subdirectory(${DEP_DIR}/glfw-3.4)
