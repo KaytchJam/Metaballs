@@ -8,6 +8,9 @@ namespace mball {
     };
 
     class IsoSurface {
-
+        
+        float length;
+        float width;
+        float height;
     };
 }
