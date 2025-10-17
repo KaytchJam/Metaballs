@@ -20,10 +20,7 @@ bool IntRange::operator==(const IntRange& other) const {
 
 // IntRangeIterator defintions
 
-IntRange::iterator::IntRangeIterator(int start, int high) {
-    this->m_at = start;
-    this->m_high = high;
-}
+IntRange::iterator::IntRangeIterator(int start, int high) : m_at(start), m_high(high) {}
 
 IntRange::iterator::value_type IntRange::iterator::operator*() const {
     return this->m_at;
