@@ -20,7 +20,9 @@ target_include_directories(glad PUBLIC ${DEP_DIR}/glad/include)
 # add executables
 add_executable(metaballs src/main.cpp)
 
+target_include_directories(metaballs PRIVATE src/include)
 target_include_directories(metaballs PRIVATE ${DEP_DIR}/glad/include)
+target_include_directories(metaballs PRIVATE ${DEP_DIR})
 
 # link against both opengl & glfw
 target_link_libraries(metaballs PRIVATE glad glfw OpenGL::GL)
