@@ -25,7 +25,7 @@ public:
         using iterator_category = std::input_iterator_tag;
 
         int m_at;
-        int m_high;
+        const int m_high;
         IntRangeIterator(int start, int high);
 
         value_type operator*() const;
