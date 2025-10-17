@@ -13,7 +13,7 @@ static unsigned int my_pow_int(const unsigned int base, const unsigned int exp) 
 }
 
 namespace mball {
-    /** Represents a cube corner point in the IsoSurface. */
+    /** Represents a cube corner point in an IsoSurface. */
     struct IsoPoint {
         glm::vec3 position;
         float density;
@@ -61,12 +61,15 @@ namespace mball {
         IsoSurface::const_iterator begin() const;
         IsoSurface::const_iterator end() const;
 
+        /** Get the IsoPoint on the IsoSurface at index 'i' */
         IsoPoint& get(int i);
         const IsoPoint& get(int i) const;
 
-        /** Builds an IsoSurface object centered at position 'center', with
+        /** Initializes an IsoSurface object centered at position 'center', with
          * side lengths 'side_length', and 'partitions' partitions. Partitions
-         * must be an EVEN positive integer. */
+         * must be an EVEN positive integer.
+         * 
+         * If partitions is odd, `new_partitions = partitions - 1` */
         static IsoSurface construct(const glm::vec3& center, float side_length, unsigned int partitions) {
             assert(partitions > 1);
             
@@ -91,22 +94,27 @@ namespace mball {
         /** Returns an IndexCompactor that uses
          * the shape of the IsoSurface as a context */
         IndexCompactor compactor() const {
-            return IndexCompactor(partitions);
+            return IndexCompactor(partitions + 1);
         }
 
+        /** Returns the number of indices (or points) within the IsoSurface */
         size_t indices() const {
             return isopoints.size();
         }
 
+        /** Returns the shape (indices per axis) of this IsoSurface 
+         * as an IndexDim */
         IndexDim shape() const {
             return IndexDim(partitions + 1);
         }
 
+        /** Returns the side length of this IsoSurface */
         float length() const {
             return this->side_length;
         }
 
-        void print() const {
+        /** For debugging */
+        void _print() const {
             const IndexDim surface_shape = this->shape();
             for (const IsoPoint& iso : *this) {
                 const glm::vec3& pos = iso.position;
