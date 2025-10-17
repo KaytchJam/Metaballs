@@ -1,4 +1,5 @@
-#include "isosurface.hpp"
+
+#include <isosurface.hpp>
 
 using namespace mball;
 
