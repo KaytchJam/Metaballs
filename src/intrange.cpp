@@ -1,4 +1,5 @@
-#include "intrange.hpp"
+
+#include <intrange.hpp>
 
 // IntRange definitions
 
@@ -6,7 +7,6 @@ IntRange::IntRange() : m_low(0), m_high(0) {}
 IntRange::IntRange(int high) : m_low(0), m_high(high) {}
 IntRange::IntRange(int low, int high) : m_low(low), m_high(high) {}
 IntRange::IntRange(const IntRange& ir) : m_low(ir.m_low), m_high(ir.m_high) {}
-IntRange::~IntRange() {}
 
 int IntRange::low() const { return this->m_low; }
 int IntRange::high() const { return this->m_high; }
