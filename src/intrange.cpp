@@ -1,6 +1,7 @@
 #include "intrange.hpp"
 
 // IntRange definitions
+
 IntRange::IntRange() : m_low(0), m_high(0) {}
 IntRange::IntRange(int high) : m_low(0), m_high(high) {}
 IntRange::IntRange(int low, int high) : m_low(low), m_high(high) {}
