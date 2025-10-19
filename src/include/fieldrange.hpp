@@ -10,7 +10,7 @@ typedef glm::ivec3 IndexDim;
 
 /** Represents a range across different indices. */
 struct FieldRange {
-    const std::array<IntRange,3> m_bounds;
+    std::array<IntRange,3> m_bounds;
 
     FieldRange(const std::array<IntRange,3>& bounds);
     FieldRange(const std::array<int,6>& bounds);
