@@ -13,8 +13,8 @@ struct FieldRange {
     std::array<IntRange,3> m_bounds;
 
     FieldRange(const std::array<IntRange,3>& bounds);
-    FieldRange(const std::array<int,6>& bounds);
-    FieldRange(int low, int high);
+    FieldRange(const std::array<int32_t,6>& bounds);
+    FieldRange(int32_t low, int32_t high);
     FieldRange(const IntRange& ir);
     // FieldRange(const IndexDim& highs);
     ~FieldRange() = default;
@@ -28,12 +28,12 @@ struct FieldRange {
         ~FieldRangeIterator() = default;
         
         using value_type = IndexDim;
-        using reference_type = const IndexDim&;
-        using pointer_type = void;
+        using reference = const IndexDim&;
+        using pointer = void;
         using iterator_category = std::input_iterator_tag;
-        using difference_type = int;
+        using difference_type = std::ptrdiff_t;
         
-        reference_type operator*();
+        reference operator*();
         FieldRangeIterator& operator++();
         FieldRangeIterator operator++(int);
 

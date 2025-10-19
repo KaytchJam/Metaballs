@@ -1,34 +1,36 @@
 #pragma once
 
 #include <iterator>
+#include <cstdint>
 
 /** Range representing the interval [low, high). Note that high is not included in the range */
 class IntRange {
 private:
-    int m_low;
-    int m_high;
+    int32_t m_low;
+    int32_t m_high;
 
 public:
     IntRange();
-    IntRange(int high);
-    IntRange(int low, int high);
+    IntRange(int32_t high);
+    IntRange(int32_t low, int32_t high);
     IntRange(const IntRange& ir);
     ~IntRange() = default;
 
-    int low() const;
-    int high() const;
+    int32_t low() const;
+    int32_t high() const;
+    uint32_t size() const;
 
     struct IntRangeIterator {
         // Iterator Traits
-        using value_type = int;
-        using difference_type = int;
-        using pointer_type = void;
-        using reference_type = int; 
+        using value_type = int32_t;
+        using reference = value_type; 
+        using pointer = void;
+        using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
 
-        int m_at;
-        const int m_high;
-        IntRangeIterator(int start, int high);
+        int32_t m_at;
+        const int32_t m_high;
+        IntRangeIterator(int32_t start, int32_t high);
 
         value_type operator*() const;
         IntRangeIterator& operator++();
