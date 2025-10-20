@@ -10,6 +10,8 @@ IntRange::IntRange(const IntRange& ir) : m_low(ir.m_low), m_high(ir.m_high) {}
 
 int IntRange::low() const { return this->m_low; }
 int IntRange::high() const { return this->m_high; }
+uint32_t IntRange::size() const { return abs(this->m_high - this->m_low); }
+
 IntRange::iterator IntRange::begin() const { return IntRange::iterator(this->m_low, this->m_high); }
 IntRange::iterator IntRange::end() const { return IntRange::iterator(this->m_high, this->m_high); }
 bool IntRange::contains(int i) const { return this->m_low <= i && i < this->m_high; }
