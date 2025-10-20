@@ -64,7 +64,7 @@ FRIter::FieldRangeIterator(
     const IndexDim& p_at
 ) : at(p_at), m_bounds(p_bounds) {}
 
-FRIter::reference_type FieldRange::FieldRangeIterator::operator*() {
+FRIter::reference FieldRange::FieldRangeIterator::operator*() {
     return at;
 }
 
