@@ -352,9 +352,36 @@ int animation_test() {
     return EXIT_SUCCESS;
 }
 
-int main() {
-    metaball_scenes();
-    // animation_test();
+int help() {
+    std::cout << "Please include a flag after the executable name. The options are:\n"
+    << "\t1) -animation | -a : Play an animation of a paper folding/shaking that uses metaballs\n"
+    << "\t2) -scenes | -s : View multiple rendered metaball scenes. Click left & right to change the scene. "
+    << "Move the camera by dragging w/ the mouse left-click, and travel around the scene with WASD"
+    << std::endl;
+    return EXIT_SUCCESS;
+}
+
+int main(int argc, char* argv[]) {
+    int (*scenario)() = nullptr;
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+
+        if (arg == "-animation" | arg == "-a") {
+            scenario = animation_test;
+        } else if (arg == "-scenes" || arg == "-s") {
+            scenario = metaball_scenes;
+        } else if (arg == "-help" || arg == "-h") {
+            scenario = help;
+        }
+    }
+
+    if (scenario != nullptr) {
+        scenario();
+    } else {
+        std::cout << "Not a valid input." << std::endl;
+        help();
+    }
+   
     return EXIT_SUCCESS;
 }
 
