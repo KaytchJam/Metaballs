@@ -5,11 +5,10 @@
 
 /** Range representing the interval [low, high). Note that high is not included in the range */
 class IntRange {
-private:
+public:
     int32_t m_low;
     int32_t m_high;
 
-public:
     IntRange();
     IntRange(int32_t high);
     IntRange(int32_t low, int32_t high);
