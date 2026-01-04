@@ -18,7 +18,7 @@ add_library(glad STATIC ${DEP_DIR}/glad/src/glad.c)
 target_include_directories(glad PUBLIC ${DEP_DIR}/glad/include)
 
 # add executables
-add_executable(metaballs src/main.cpp)
+add_executable(metaballs src/main.cpp src/fieldrange.cpp src/intrange.cpp src/isosurface.cpp src/marcher.cpp)
 
 target_include_directories(metaballs PRIVATE src/include)
 target_include_directories(metaballs PRIVATE ${DEP_DIR}/glad/include)
