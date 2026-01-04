@@ -43,14 +43,14 @@ FieldRange::FieldRange(int p_low, int p_high) : m_bounds(duplicate_range<3>(IntR
 FieldRange::FieldRange(const IntRange& p_ir) : m_bounds(duplicate_range<3>(p_ir)) {}
 
 FRIter FieldRange::begin() const { return FieldRangeIterator(m_bounds); }
-FRIter FieldRange::end() const { return FieldRangeIterator(m_bounds, IndexDim(0,0, m_bounds[2].high())); }
+FRIter FieldRange::end() const { return FieldRangeIterator(m_bounds, IndexDim(m_bounds[0].low(), m_bounds[1].low(), m_bounds[2].high())); }
 
 IndexDim FieldRange::low() const {
-    return project_range_to_dim(m_bounds, IntRange::low);
+    return project_range_to_dim(m_bounds, &IntRange::low);
 }
 
 IndexDim FieldRange::high() const {
-    return project_range_to_dim(m_bounds, IntRange::high);
+    return project_range_to_dim(m_bounds, &IntRange::high);
 }
 
 // FIELD RANGE ITERATOR DEFINITIONS
