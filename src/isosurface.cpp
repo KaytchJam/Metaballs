@@ -1,7 +1,7 @@
 
 #include <isosurface.hpp>
 
-using namespace mball;
+using namespace mbl;
 
 // INDEX COMPACTOR FUNCTIONS
 
@@ -39,7 +39,7 @@ const IndexDim& IndexCompactor::dimensions() const {
 uint32_t pow_int(const uint32_t base, const uint32_t exp) {
     if (base == 0 || base == 1) return base;
     uint32_t acc = 1;
-    for (int j = 0; j < exp; j++) { acc *= base; }
+    for (uint32_t j = 0; j < exp; j++) { acc *= base; }
     return acc;
 }
 
@@ -48,8 +48,9 @@ uint32_t cube_int(const uint32_t base) {
 }
 
 IsoSurface::IsoSurface(const glm::vec3& center, const float side_length, const uint32_t partitions) 
-    : m_center_position(center), m_side_length(side_length), m_partitions(partitions), m_positions(), m_densities() {
-    m_densities.reserve(cube_int(partitions + 1));
+    : m_center_position(center), m_side_length(side_length), m_partitions(partitions) {
+    const uint32_t size_cubed = cube_int(partitions + 1);
+    m_isopoints.reserve(size_cubed);
 }
 
 IsoSurface IsoSurface::construct(const glm::vec3& center, const float side_length, uint32_t partitions) {
@@ -67,7 +68,7 @@ IsoSurface IsoSurface::construct(const glm::vec3& center, const float side_lengt
     for (const IndexDim& p_idx : FieldRange(0, axis_indices)) {
         offset = glm::vec3(p_idx - mid_idx);
         ratios = offset / half_indices;
-        surface.m_positions.push_back( ratios * side_length);
+        surface.m_isopoints.emplace_back( center + ratios * side_length, 0.0f);
     }
 
     return surface;
@@ -78,7 +79,7 @@ IndexCompactor IsoSurface::compactor() const {
 }
 
 size_t IsoSurface::indices() const {
-    return m_positions.size();
+    return m_isopoints.size();
 }
 
 IndexDim IsoSurface::shape() const {
@@ -89,42 +90,52 @@ float IsoSurface::length() const {
     return this->m_side_length;
 }
 
-ProtectedVectorRange<glm::vec3> IsoSurface::positions() {
-    return ProtectedVectorRange<glm::vec3>{ this->m_positions };
+std::vector<IsoPoint>& IsoSurface::isopoints() {
+    return this->m_isopoints;
 }
 
-ConstProtectedVectorRange<glm::vec3> IsoSurface::positions() const {
-    return ConstProtectedVectorRange<glm::vec3>{ this->m_positions };
+const std::vector<IsoPoint>& IsoSurface::isopoints() const {
+    return this->m_isopoints;
 }
 
-ProtectedVectorRange<float> IsoSurface::densities() {
-    return ProtectedVectorRange<float>{ this->m_densities };
+IsoPoint& IsoSurface::get(uint32_t i) {
+    return this->m_isopoints[i];
 }
 
-ConstProtectedVectorRange<float> IsoSurface::densities() const {
-    return ConstProtectedVectorRange<float>{ this->m_densities };
+const IsoPoint& IsoSurface::get(uint32_t i) const {
+    return this->m_isopoints[i];
 }
 
-IsoPointProxies IsoSurface::isopoints() {
-    return IsoPointProxies(*this);
+IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) {
+    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    return get(index);
 }
 
-IsoPointProxy IsoSurface::get(uint32_t i) {
-    return IsoPointProxy{ m_positions[i], m_densities[i]};
+const IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) const {
+    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    return get(index);
 }
 
 glm::vec3& IsoSurface::get_position(uint32_t i) {
-    return m_positions[i];
+    return get(i).position;
 }
 
 const glm::vec3& IsoSurface::get_position(uint32_t i) const {
-    return m_positions[i];
+    return get(i).position;
 }
 
 float& IsoSurface::get_density(uint32_t i) {
-    return m_densities[i];
+    return get(i).density;
 }
 
 const float& IsoSurface::get_density(uint32_t i) const {
-    return m_densities[i];
+    return get(i).density;
+}
+
+IsoPoint* IsoSurface::data() {
+    return this->m_isopoints.data();
+}
+
+const IsoPoint* IsoSurface::data() const {
+    return this->m_isopoints.data();
 }
