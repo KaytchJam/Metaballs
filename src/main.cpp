@@ -361,17 +361,394 @@ int help() {
     return EXIT_SUCCESS;
 }
 
+
+#include <fieldrange.hpp>
+#include <isosurface.hpp>
+#include <intrange.hpp>
+#include <metaball.hpp>
+#include <metaball_traits.hpp>
+#include <marcher.hpp>
+
+#include <memory>
+#include <iostream>
+#include <numeric>
+#include <iterator>
+
+template <typename T> using Unique = std::unique_ptr<T>;
+template <typename T> using Ptr = T*;
+
+struct InverseSquareBlob {
+    glm::vec3 m_center = glm::vec3(0.0f);
+    float m_scale = 1.0;
+
+    InverseSquareBlob(const glm::vec3& center = glm::vec3(0.0), const float scale = 1.0f) 
+        : m_center(center), m_scale(scale) {}
+
+    float operator()(float x, float y, float z) const {
+        return m_scale / (
+            (float) std::pow(m_center.x - x, 2) + 
+            (float) std::pow(m_center.y - y, 2) + 
+            (float) std::pow(m_center.z - z, 2)
+        );
+    }
+
+    BoundingBox get_bounding_box() const {
+        const glm::vec3 sqrt_of_scale_vec(sqrtf(m_scale));
+        return BoundingBox{ m_center + sqrt_of_scale_vec, m_center - sqrt_of_scale_vec };
+    }
+};
+
+struct Gaussian {
+    float variance = 1.0f;
+
+    float operator()(float x, float y, float z) const {
+        return expf(-(x*x + y*y + z*z) / (2*variance));
+    }
+};
+
+float sum_floats(float x, float y, float z) {
+    return x + y + z;
+}
+
+void print_bits(int bytes, int min_bits = 8, bool newline_terminate = false) {
+    int initial = bytes;
+    while (bytes != 0) {
+        for (int i = 0; i < min_bits; i++) {
+            std::cout << (bytes & 0x1);
+            bytes = bytes >> 1;
+        }
+    }
+
+    if (newline_terminate && initial != 0) {
+        std::cout << std::endl;
+    }
+}
+
+template <typename M>
+glm::vec3 compute_gradient_main(const mbl::Metaball<M>& m, const glm::vec3& p, std::array<float, 6>& sns, const float eps = 1e-3f) {
+    const glm::vec3 dx = glm::vec3(eps, 0, 0);
+    const glm::vec3 dy = glm::vec3(0, eps, 0);
+    const glm::vec3 dz = glm::vec3(0, 0, eps);
+
+    const glm::vec3 pdx = p + dx;
+    const glm::vec3 mdx = p - dx;
+    const glm::vec3 pdy = p + dy;
+    const glm::vec3 mdy = p - dy;
+    const glm::vec3 pdz = p + dz;
+    const glm::vec3 mdz = p - dx;
+
+    sns[0] = m(pdx.x, pdx.y, pdx.z);
+    sns[1] = m(mdx.x, mdx.y, mdx.z);
+    sns[2] = m(pdy.x, pdy.y, pdy.z);
+    sns[3] = m(mdy.x, mdy.y, mdy.z);
+    sns[4] = m(pdz.x, pdz.y, pdz.z);
+    sns[5] = m(mdz.x, mdz.y, mdz.z);
+
+    return glm::vec3(
+        sns[0] - sns[1],
+        sns[2] - sns[3],
+        sns[4] - sns[5]
+    );
+}
+
+template <typename M>
+glm::vec3 compute_normal_main(const mbl::Metaball<M>& m, const glm::vec3& p, std::array<float, 6>& sns, float eps = 1e-3f) {
+    return -glm::normalize(compute_gradient_main(m, p, sns));
+}
+
+/** 
+ *  What I learned from some of these benchmarks:
+ *  - CRTP & Type Erasure Approaches seem to perform better than Type Erasure (Aggregate Metaball) and Vector of Functions as 'partitions' increases
+ *  - As the 'length' increases, so too does the time each run takes (not sure why?)
+ * 
+ *  TODO:
+ *  - Implement a 'joined' approach that merges the construct & density setting phases together
+ *  - Export results to .csv and graph
+ */
+int test() {
+    float length = 1;
+    int32_t partitions = 2;
+    float iso_value = 1.0f;
+
+    mbl::Metaball<InverseSquareBlob> m1 = mbl::Metaball(InverseSquareBlob(glm::vec3(0.0f, 0.f, 0.f), 1.f));
+    mbl::IsoSurface s = mbl::IsoSurface::construct(glm::vec3(0.f, 0.f, 0.f), (float) length, partitions);
+
+    std::vector<Vertex> vertices;
+    std::vector<int> indices;
+
+    std::cout << "Length = " << s.length() << std::endl;
+    std::cout << "Origin = " << s.get_origin().x << ", " << s.get_origin().y << ", " << s.get_origin().z << std::endl;
+
+    // Set density values for each IsoPoint
+    for (mbl::IsoPoint& p : s.isopoints()) {
+        glm::vec3& pos = p.position;
+        std::cout << "[" << pos.x << "," << pos.y << "," << pos.z << "]" << std::endl;
+        p.density = m1(p.position.x, p.position.y, p.position.z);
+    }
+
+    int empty_count = 0;
+    int non_empty_count = 0;
+    int total_cubes = 0;
+
+    // Index offsets for index bit construction
+    // maps my cube index ordering to that in the original
+    // marching cubes paper (circling around the square instead of a Z-ordering)
+    IndexDim offsets[8] = {
+        {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
+        {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}
+    };
+
+    // Take our points (re-ordered according to `offsets`) and store pointers to them in this buffer
+    std::array<mbl::IsoPoint*,8> cube_isopoints = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    std::array<glm::vec3,12> edge_points = {};
+    std::array<Vertex,12> cube_out_vertices = {}; // Vertices are passed here before finally being copied into the big array of Vertices
+    std::array<int, 12> cube_out_indices = {};
+    std::array<float, 6> sns = {};
+
+    // Build the vertices for each cube and add to Vertex list
+    for (mbl::CubeView cv : mbl::MarchingCubeRange(s)) {
+        total_cubes += 1;
+
+        uint8_t bits = 0;
+        uint8_t mask = 1;
+
+        // Compute the cube index for the cube
+        uint8_t cube_isopoint_index = 0;
+        for (IndexDim& offset : offsets) {
+            mbl::IsoPoint& cube_point = cv.at(offset.x, offset.y, offset.z);
+            bits = bits | (mask * (uint8_t) (cube_point.density >= iso_value));
+            mask = mask << 1;
+
+            cube_isopoints[cube_isopoint_index] = &cube_point;
+            cube_isopoint_index += 1;
+        }
+
+        // for (mbl::IsoPoint& p : cv) {
+        //     bits = bits | (mask * (uint8_t) (p.density >= 1));
+        //     mask = mask << 1;
+        // }
+
+        print_bits(bits, 8, true);
+        
+        const bool outcome = (bits == 0 || bits == 0xFF);
+        empty_count += (int) outcome;
+        non_empty_count += (int) (!outcome);
+        // std::cout << " Has Vertex = " << std::boolalpha << (!outcome) << std::endl;
+
+        // If we have a non-trivial bit arrangement (bits != 0x0 || 0xFF) we can go on to get the vertices
+        if (bits != 0x0 && bits != 0xFF) {
+
+            // Get the interpolated edge midpoint positions
+            int cube_edges = edge_table[bits];
+            std::cout << "\n===============\nEdge Bits = ";
+            print_bits(cube_edges, 12, true);
+            int cube_edge_index = 0;
+            while (cube_edges != 0) {
+                if ((0x1 & cube_edges) == 1) {
+                    const int (&edge)[2] = edge_mappings[cube_edge_index];
+                    std::cout << "\nEdge #" << cube_edge_index << " = (" << edge[0] << ", "<< edge[1] << ")" << std::endl;
+
+                    mbl::IsoPoint& I1 = *cube_isopoints[edge[0]];
+                    mbl::IsoPoint& I2 = *cube_isopoints[edge[1]];
+
+                    std::cout << "I1 = [" << I1.position.x << ", " << I1.position.y << ", " << I1.position.z << "], Density = " << I1.density << std::endl;
+                    std::cout << "I2 = [" << I2.position.x << ", " << I2.position.y << ", " << I2.position.z << "], Density = " << I2.density << std::endl; 
+    
+                    float denominator = I2.density - I1.density;
+                    edge_points[cube_edge_index] = I1.position + (iso_value - I1.density) * (I2.position - I1.position) / denominator;
+
+                    std::cout << "Edge #" << cube_edge_index << " Position = [" << edge_points[cube_edge_index].x 
+                        << ", " << edge_points[cube_edge_index].y << ", " << edge_points[cube_edge_index].z << "]" << std::endl;
+                }
+
+                cube_edges = cube_edges >> 1;
+                cube_edge_index += 1;
+            }
+
+            // Now construct the vertices and add to our Vertex buffer
+            const int (&edge_ordering)[16] = triTable[bits];
+            int edge_ordering_index = 0;
+            while (edge_ordering[edge_ordering_index] != -1 && edge_ordering_index < 16) {
+                const glm::vec3& p0 = edge_points[edge_ordering[edge_ordering_index]];
+                const glm::vec3& p1 = edge_points[edge_ordering[edge_ordering_index+1]];
+                const glm::vec3& p2 = edge_points[edge_ordering[edge_ordering_index+2]];
+
+                cube_out_vertices[edge_ordering_index].position = edge_points[edge_ordering[edge_ordering_index]];
+                cube_out_vertices[edge_ordering_index].normal = compute_normal_main(m1, cube_out_vertices[edge_ordering_index].position, sns); 
+
+                cube_out_vertices[edge_ordering_index + 1].position = edge_points[edge_ordering[edge_ordering_index+1]];
+                cube_out_vertices[edge_ordering_index + 1].normal = compute_normal_main(m1, cube_out_vertices[edge_ordering_index+1].position, sns); 
+
+                cube_out_vertices[edge_ordering_index + 2].position = edge_points[edge_ordering[edge_ordering_index+2]];
+                cube_out_vertices[edge_ordering_index + 2].normal = compute_normal_main(m1, cube_out_vertices[edge_ordering_index+2].position, sns); 
+
+                int index_at = edge_ordering_index + (int) indices.size();
+                cube_out_indices[edge_ordering_index] = index_at;
+                cube_out_indices[edge_ordering_index + 1] = index_at + 1;
+                cube_out_indices[edge_ordering_index + 2] = index_at + 2;
+
+                edge_ordering_index += 3;
+            }
+
+            // copy from 'cube_out_vertices' to the full vertices buffer
+            std::cout << "\nCopying over " << edge_ordering_index << " vertices..." << std::endl;
+            for (int i = 0; i < edge_ordering_index; i++) {
+                std::cout << "[" << cube_out_vertices[i].position.x << ", " << cube_out_vertices[i].position.y << ", " << cube_out_vertices[i].position.z << "]" << std::endl;
+            }
+
+            std::copy(cube_out_vertices.begin(), cube_out_vertices.begin() + edge_ordering_index, std::back_inserter(vertices));
+            std::copy(cube_out_indices.begin(), cube_out_indices.begin() + edge_ordering_index, std::back_inserter(indices));
+        }
+    }
+
+    std::cout << "Total Cubes = " << total_cubes << std::endl;
+    std::cout << "Empty Cubes (Exterior) = " << empty_count << std::endl;
+    std::cout << "Non-Empty Cubes = " << non_empty_count << std::endl;
+
+    std::cout << "vertice length = " << vertices.size() << ", indices length = " << indices.size() << std::endl;
+
+    int k = 0;
+    for (Vertex& v : vertices) {
+        if (k > 0 && k % 3 == 0) {
+            std::cout << " Indices = "; 
+            for (int i = k - 3; i < k; i++) {
+                std::cout << indices[i] << " ";
+            }
+            std::cout << "\n" << std::endl;
+        }
+
+        std::cout << "Vertex #" << k << "= Position: [" << v.position.x << ", " << v.position.y << ", " << v.position.z << "]"
+                << " , Normal: [" << v.normal.x << ", " << v.normal.y << ", " << v.normal.z << "]" << std::endl;
+         k += 1;
+    }
+
+    // render loop
+
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes (Refactor) Test").open();
+
+    // GLuint vao;
+    // glGenVertexArrays(1, &vao);
+    // glBindVertexArray(vao);
+
+    // GLuint vbo;
+    // glGenBuffers(1, &vbo);
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    // glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    // GLuint ebo;
+    // glGenBuffers(1, &ebo);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+
+    unsigned int VBO, EBO;
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    // Bind Vertex Array Object first
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    // Copy vertex data into VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    // Copy index data into EBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), indices.data(), GL_STATIC_DRAW);
+
+    
+    Shader shader = Shader::from_file(
+        "./src/shaders/vertex/vertex_lighting.vert",
+        "./src/shaders/fragment/vertex_lighting.frag"
+    ).value();
+
+    shader.add_uniform("lightPos", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(10.f, 10.f, 10.f)[0]);
+    });
+
+    shader.add_uniform("color", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(1.f, 0.f, 0.f)[0]);
+    });
+
+    GLuint program = shader.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+    const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
+
+    // Position attribute
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(vpos_location);
+    
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+    glEnableVertexAttribArray(vpos_location);
+
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(vnorm_location);
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
+
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.f, 0.f, 0.f, 1.0f);
+
+    const float FPS = 1.f / 30.f;
+    float lastFrame = 0.f;
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        process_input(win, deltaTime);
+
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view;
+
+        shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        shader.ping_all_uniforms().use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+        // glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+        
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+    
+    glfwDestroyWindow(win);
+    glfwTerminate();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[]) {
     int (*scenario)() = nullptr;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
-        if (arg == "-animation" | arg == "-a") {
+        if (arg == "-animation" || arg == "-a") {
             scenario = animation_test;
         } else if (arg == "-scenes" || arg == "-s") {
             scenario = metaball_scenes;
         } else if (arg == "-help" || arg == "-h") {
             scenario = help;
+        } else if (arg == "-test" || arg == "-t") {
+            scenario = test;
         }
     }
 
@@ -384,88 +761,3 @@ int main(int argc, char* argv[]) {
    
     return EXIT_SUCCESS;
 }
-
-
-// #include <ratio>
-
-// int ratio_test() {
-//     std::ratio<10, 1> my_ratio = std::ratio<10, 1>();
-//     constexpr int res = my_ratio.num();
-
-//     return 0;
-// }
-
-// #include <iostream>
-// #include <sstream>
-// #include <string>
-
-// // T needs to be copyable
-// template <typename T>
-// void print_num_bytes(T type) {
-//     std::size_t bytes = sizeof(T);
-//     std::cout << bytes << " bytes" << std::endl;
-// }
-
-// template <typename T>
-// void print_bitstring(T type) {
-//     const std::size_t bytes = sizeof(T);
-//     const std::size_t total_bits = bytes * 8;
-//     std::size_t bits_left = bytes * 8;
-//     std::stringstream ss;
-    
-//     while (bits_left) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         ss << bit;
-//         bits_left -= 1;
-//     }
-    
-//     std::cout << ss.str() << std::endl;
-// }
-
-// typedef void (*callback)(int bit_idx);
-
-// // does nothing
-// void V(int bit_idx) {}
-
-// template <typename T>
-// void callback_on_ones(T type, callback C) {
-//     const size_t bytes = sizeof(T);
-//     const size_t total_bits = bytes * 8;
-//     size_t bits_left = total_bits;
-
-//     std::array<callback, 2> callback_switch = {V, C};
-
-//     while (bits_left) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         callback_switch[bit](static_cast<int>(total_bits - bits_left));
-//         bits_left -= 1;
-//     }
-// }
-
-// template <typename T>
-// void cback_on_ones(T type, callback C) {
-//     size_t bit_index = 0;
-//     std::array<callback, 2> cback_switch = {V, C};
-
-//     while (type) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         cback_switch[bit]((int) bit_index);
-//         bit_index += 1;
-//     }
-// }
-
-// void P(int bit_idx) {
-//     std::cout << "bit at bit-index: " << bit_idx << std::endl;
-// }
-
-// int main() {
-//     int n1 = 10;
-//     char c = 'a';
-//     callback_on_ones(n1, P);
-//     cback_on_ones(n1, P);
-//     return 0;
-// }
- 

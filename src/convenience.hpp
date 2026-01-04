@@ -28,8 +28,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 }
 
 struct Camera {
-    glm::vec3 position = { 2.5f, 2.0f, 3.0f };
-    glm::vec3 front = { 0.0f, 0.0f, -1.0f };
+    glm::vec3 position = { 0.0, 0.0, -5 };
+    glm::vec3 front = { 0.0f, 0.0f, 1.0f };
     glm::vec3 up = { 0.0f, 1.0f, 0.0f };
 
     float yaw = -90.0f;
@@ -125,7 +125,7 @@ Chest<GLFWwindow*> setup(int length, int width, const char* name) {
         glfwSwapInterval(1);
         glfwSetCursorPosCallback(win, mouse_callback);
         glfwSetErrorCallback(error_callback);
-        glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         winchest = Chest<GLFWwindow*>::stuff(win);
     }
 
