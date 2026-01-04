@@ -6,11 +6,20 @@
 #include <vector>
 #include <iostream>
 
-namespace mball {
+namespace mbl {
     /** Represents a cube corner point in an IsoSurface. */
     struct IsoPointProxy {
         glm::vec3& position;
         float& density;
+    };
+
+    /** Representation of a cube corner point in an IsoSurface */
+    struct IsoPoint {
+        glm::vec3 position = glm::vec3(0.f);
+        float density = 0.f;
+
+        IsoPoint() {}
+        IsoPoint(const glm::vec3& pos, const float dens) : position(pos), density(dens) {}
     };
 
     typedef glm::ivec3 IndexDim;
@@ -30,40 +39,6 @@ namespace mball {
 
         const IndexDim& dimensions() const;
     };
-
-    /** Give access to ranging over a vector type without explicit
-     * access to the inner vector */
-    template <typename ValueType>
-    struct ProtectedVectorRange {
-    private:
-        std::vector<ValueType>& V;
-    public:
-        using iterator = typename std::vector<ValueType>::iterator;
-        using const_iterator = typename std::vector<ValueType>::const_iterator;
-
-        ProtectedVectorRange(std::vector<ValueType>& V) : V(V) {}
-
-        iterator begin() { return V.begin(); }
-        const_iterator begin() const { return V.begin(); }
-        iterator end() { return V.end(); }
-        const_iterator end() const { return V.end(); }
-    };
-
-    template <typename ValueType>
-    struct ConstProtectedVectorRange {
-    private:
-        const std::vector<ValueType>& V;
-    public:
-        using iterator = typename std::vector<ValueType>::iterator;
-        using const_iterator = typename std::vector<ValueType>::const_iterator;
-
-        ConstProtectedVectorRange(const std::vector<ValueType>& V) : V(V) {}
-
-        const_iterator begin() const { return V.begin(); }
-        const_iterator end() const { return V.end(); }
-    };
-
-    struct IsoPointProxies;
     
     /** Cube shaped IsoSurface with side lengths 'length' is created, centered
      * on position 'center'. */
@@ -72,44 +47,41 @@ namespace mball {
         float m_side_length;
         uint32_t m_partitions;
         glm::vec3 m_center_position;
-
-        std::vector<glm::vec3> m_positions;
-        std::vector<float> m_densities;
+        std::vector<IsoPoint> m_isopoints;
 
         IsoSurface(const glm::vec3& center, float length, uint32_t partitions);
     public:
         ~IsoSurface() = default;
 
-        using position_iterator = std::vector<glm::vec3>::iterator;
-        using density_iterator = std::vector<float>::iterator;
-        
-        ProtectedVectorRange<glm::vec3> positions();
-        ConstProtectedVectorRange<glm::vec3> positions() const;
-
-        ProtectedVectorRange<float> densities();
-        ConstProtectedVectorRange<float> densities() const;
-
-        IsoPointProxies isopoints();
+        std::vector<IsoPoint>& isopoints();
+        const std::vector<IsoPoint>& isopoints() const;
         
         /** Get the IsoPoint on the IsoSurface at index 'i' */
-        IsoPointProxy get(uint32_t i);
+        IsoPoint& get(uint32_t i);
+        const IsoPoint& get(uint32_t) const;
+
+        IsoPoint& get(uint32_t i, uint32_t j, uint32_t k);
+        const IsoPoint& get(uint32_t i, uint32_t j, uint32_t k) const;
         
         glm::vec3& get_position(uint32_t i);
         const glm::vec3& get_position(uint32_t i) const;
 
         float& get_density(uint32_t i);
         const float& get_density(uint32_t i) const;
-
+        
         /** Initializes an IsoSurface object centered at position 'center', with
          * side lengths 'side_length', and 'partitions' partitions. Partitions
          * must be an EVEN positive integer.
          * 
          * If partitions is odd, `new_partitions = partitions - 1` */
         static IsoSurface construct(
-            const glm::vec3& center, 
-            const float side_length, 
+            const glm::vec3& center,
+            const float side_length,
             uint32_t partitions
         );
+
+        IsoPoint* data();
+        const IsoPoint* data() const;
         
         /** Returns an IndexCompactor that uses
          * the shape of the IsoSurface as a context */
@@ -117,6 +89,10 @@ namespace mball {
 
         /** Returns the number of indices (or points) within the IsoSurface */
         size_t indices() const;
+
+        const glm::vec3& get_origin() const {
+            return this->m_center_position;
+        }
         
         /** Returns the shape (indices per axis) of this IsoSurface 
          * as an IndexDim */
@@ -128,72 +104,13 @@ namespace mball {
         /** For debugging */
         void _print_positions() const {
             const IndexDim surface_shape = this->shape();
-            for (const glm::vec3& pos : positions()) {
-                std::cout << "[" << pos.x << "," << pos.y << "," << pos.z << "]" << std::endl;
+            for (const IsoPoint& isopoint : this->isopoints()) {
+                std::cout << "[" 
+                    << isopoint.position.x << "," 
+                    << isopoint.position.y << "," 
+                    << isopoint.position.z << 
+                "]" << std::endl;
             }
-        }
-    };
-
-    struct IsoPointProxies {
-        IsoSurface& m_parent;
-
-        IsoPointProxies(IsoSurface& surface) : m_parent(surface) {}
-
-        using IterPosition = IsoSurface::position_iterator;
-        using IterDensity = IsoSurface::density_iterator;
-
-        struct IPPIterator {
-        private:
-            IterPosition m_pos_iter;
-            IterDensity m_density_iter;
-        public:
-    
-            using value_type = IsoPointProxy;
-            using reference_type = value_type;
-            using pointer_type = void;
-    
-            IPPIterator(IterPosition iterP, IterDensity iterD)
-                : m_pos_iter(iterP), m_density_iter(iterD) {}
-
-            IsoPointProxy operator*() {
-                return IsoPointProxy{ *m_pos_iter, *m_density_iter };
-            }
-
-            IPPIterator& operator++() {
-                ++m_pos_iter;
-                ++m_density_iter;
-                return *this;
-            }
-
-            IPPIterator operator++(int) {
-                IPPIterator prev = *this;
-                ++(*this);
-                return prev;
-            }
-
-            bool operator==(const IPPIterator& other) const {
-                return m_pos_iter == other.m_pos_iter && m_density_iter == other.m_density_iter;
-            }
-
-            bool operator!=(const IPPIterator& other) const {
-                return !(*this == other);
-            }
-        };
-
-        using iterator = IPPIterator;
-
-        iterator begin() {
-            return iterator(
-                m_parent.positions().begin(), 
-                m_parent.densities().begin()
-            );
-        }
-
-        iterator end() {
-            return iterator(
-                m_parent.positions().end(), 
-                m_parent.densities().end()
-            );
         }
     };
 }
