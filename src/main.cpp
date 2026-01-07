@@ -368,6 +368,7 @@ int help() {
 #include <metaball.hpp>
 #include <metaball_traits.hpp>
 #include <marcher.hpp>
+#include <engine.hpp>
 
 #include <memory>
 #include <iostream>
@@ -467,7 +468,7 @@ glm::vec3 compute_normal_main(const mbl::Metaball<M>& m, const glm::vec3& p, std
  */
 int test() {
     float length = 1;
-    int32_t partitions = 2;
+    int32_t partitions = 5;
     float iso_value = 1.0f;
 
     mbl::Metaball<InverseSquareBlob> m1 = mbl::Metaball(InverseSquareBlob(glm::vec3(0.0f, 0.f, 0.f), 1.f));
@@ -540,25 +541,25 @@ int test() {
 
             // Get the interpolated edge midpoint positions
             int cube_edges = edge_table[bits];
-            std::cout << "\n===============\nEdge Bits = ";
+            // std::cout << "\n===============\nEdge Bits = ";
             print_bits(cube_edges, 12, true);
             int cube_edge_index = 0;
             while (cube_edges != 0) {
                 if ((0x1 & cube_edges) == 1) {
                     const int (&edge)[2] = edge_mappings[cube_edge_index];
-                    std::cout << "\nEdge #" << cube_edge_index << " = (" << edge[0] << ", "<< edge[1] << ")" << std::endl;
+                    // std::cout << "\nEdge #" << cube_edge_index << " = (" << edge[0] << ", "<< edge[1] << ")" << std::endl;
 
                     mbl::IsoPoint& I1 = *cube_isopoints[edge[0]];
                     mbl::IsoPoint& I2 = *cube_isopoints[edge[1]];
 
-                    std::cout << "I1 = [" << I1.position.x << ", " << I1.position.y << ", " << I1.position.z << "], Density = " << I1.density << std::endl;
-                    std::cout << "I2 = [" << I2.position.x << ", " << I2.position.y << ", " << I2.position.z << "], Density = " << I2.density << std::endl; 
+                    // std::cout << "I1 = [" << I1.position.x << ", " << I1.position.y << ", " << I1.position.z << "], Density = " << I1.density << std::endl;
+                    // std::cout << "I2 = [" << I2.position.x << ", " << I2.position.y << ", " << I2.position.z << "], Density = " << I2.density << std::endl; 
     
                     float denominator = I2.density - I1.density;
                     edge_points[cube_edge_index] = I1.position + (iso_value - I1.density) * (I2.position - I1.position) / denominator;
 
-                    std::cout << "Edge #" << cube_edge_index << " Position = [" << edge_points[cube_edge_index].x 
-                        << ", " << edge_points[cube_edge_index].y << ", " << edge_points[cube_edge_index].z << "]" << std::endl;
+                    //std::cout << "Edge #" << cube_edge_index << " Position = [" << edge_points[cube_edge_index].x 
+                    //    << ", " << edge_points[cube_edge_index].y << ", " << edge_points[cube_edge_index].z << "]" << std::endl;
                 }
 
                 cube_edges = cube_edges >> 1;
@@ -591,21 +592,20 @@ int test() {
             }
 
             // copy from 'cube_out_vertices' to the full vertices buffer
-            std::cout << "\nCopying over " << edge_ordering_index << " vertices..." << std::endl;
-            for (int i = 0; i < edge_ordering_index; i++) {
-                std::cout << "[" << cube_out_vertices[i].position.x << ", " << cube_out_vertices[i].position.y << ", " << cube_out_vertices[i].position.z << "]" << std::endl;
-            }
+            // std::cout << "\nCopying over " << edge_ordering_index << " vertices..." << std::endl;
+            // for (int i = 0; i < edge_ordering_index; i++) {
+            //    std::cout << "[" << cube_out_vertices[i].position.x << ", " << cube_out_vertices[i].position.y << ", " << cube_out_vertices[i].position.z << "]" << std::endl;
+            // }
 
             std::copy(cube_out_vertices.begin(), cube_out_vertices.begin() + edge_ordering_index, std::back_inserter(vertices));
             std::copy(cube_out_indices.begin(), cube_out_indices.begin() + edge_ordering_index, std::back_inserter(indices));
         }
     }
 
-    std::cout << "Total Cubes = " << total_cubes << std::endl;
-    std::cout << "Empty Cubes (Exterior) = " << empty_count << std::endl;
-    std::cout << "Non-Empty Cubes = " << non_empty_count << std::endl;
-
-    std::cout << "vertice length = " << vertices.size() << ", indices length = " << indices.size() << std::endl;
+    // std::cout << "Total Cubes = " << total_cubes << std::endl;
+    // std::cout << "Empty Cubes (Exterior) = " << empty_count << std::endl;
+    // std::cout << "Non-Empty Cubes = " << non_empty_count << std::endl;
+    // std::cout << "vertice length = " << vertices.size() << ", indices length = " << indices.size() << std::endl;
 
     int k = 0;
     for (Vertex& v : vertices) {
@@ -700,7 +700,7 @@ int test() {
 
     const float FPS = 1.f / 30.f;
     float lastFrame = 0.f;
-    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     while (!glfwWindowShouldClose(win)) {
         float currentFrame = (float) glfwGetTime();
@@ -736,6 +736,110 @@ int test() {
     return EXIT_SUCCESS;
 }
 
+int test_2() {
+    mbl::MetaballEngine<mbl::Metaball<InverseSquareBlob>> engine(glm::vec3(0.f), 2.f, 5, 1.f);
+    engine.add_metaball(mbl::Metaball(InverseSquareBlob(glm::vec3(0.f), 1.f)));
+
+    mbl::common::MeshData md = engine.construct_mesh();
+
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes (Refactor) Test").open();
+
+    unsigned int VBO, EBO;
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    // Bind Vertex Array Object first
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    // Copy vertex data into VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
+
+    // Copy index data into EBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
+
+    
+    Shader shader = Shader::from_file(
+        "./src/shaders/vertex/vertex_lighting.vert",
+        "./src/shaders/fragment/vertex_lighting.frag"
+    ).value();
+
+    shader.add_uniform("lightPos", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(10.f, 10.f, 10.f)[0]);
+    });
+
+    shader.add_uniform("color", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(1.f, 0.f, 0.f)[0]);
+    });
+
+    GLuint program = shader.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+    const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
+
+    // Position attribute
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(vpos_location);
+    
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+    glEnableVertexAttribArray(vpos_location);
+
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(vnorm_location);
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
+
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.f, 0.f, 0.f, 1.0f);
+
+    const float FPS = 1.f / 30.f;
+    float lastFrame = 0.f;
+    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        process_input(win, deltaTime);
+
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view;
+
+        shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        shader.ping_all_uniforms().use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, (GLsizei) md.indices.size(), GL_UNSIGNED_INT, 0);
+        // glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+        
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+    
+    glfwDestroyWindow(win);
+    glfwTerminate();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[]) {
     int (*scenario)() = nullptr;
     for (int i = 1; i < argc; i++) {
@@ -748,7 +852,7 @@ int main(int argc, char* argv[]) {
         } else if (arg == "-help" || arg == "-h") {
             scenario = help;
         } else if (arg == "-test" || arg == "-t") {
-            scenario = test;
+            scenario = test_2;
         }
     }
 
