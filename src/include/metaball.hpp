@@ -6,8 +6,18 @@
 #include <metaball_traits.hpp>
 
 namespace mbl {
+    /** A run-time interface for Metaballs */ 
+    class DynamicMetaball {
+    public:
+        DynamicMetaball() {}
+        ~DynamicMetaball() {}
+        virtual float operator()(float x, float y, float z) const = 0;
+        virtual float compute(const glm::vec3& v) const = 0;
+    };
+
+    /** A compile-time interface for Metaballs */
     template <typename Derived>
-    class MetaballExpression {
+    class MetaballExpression : public DynamicMetaball {
     public:
         float operator()(float x, float y, float z) const {
             return static_cast<const Derived&>(*this)(x, y, z);
