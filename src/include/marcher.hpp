@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fieldrange.hpp>
 #include <isosurface.hpp>
 
