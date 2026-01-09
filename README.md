@@ -84,7 +84,7 @@ The simplest way to do this is by passing in a `lambda (float x, float y, float 
 mbl::Metaball m = mbl::Metaball([](float x, float y, float z) -> float { return x + y + z; })
 ```
 
-A disadvantage of this approach is that you lose type info and end up with a fairly "uninteresting" Metaball. An approach that remedies this is by taking our `InclinedPlane` struct and passing it into the `Metaball` just like we did with the lambda. In this scenario it's not necessary for `InclinedPlane` to implement `DynamicMetaball` itself, as it is wrapped by the `Metaball` time which implements `DynamicMetaball`.
+A disadvantage of this approach is that you lose type info and end up with a fairly "uninteresting" Metaball. An approach that remedies this is by taking our `InclinedPlane` struct and passing it into the `Metaball` just like we did with the lambda. In this scenario it's not necessary for `InclinedPlane` to implement `DynamicMetaball` itself, as it is wrapped by the `Metaball` time which implements `DynamicMetaball`. With that said `InclinedPlane` still needs to have the overload on `float operator()(float,float,float)`.
 
 ```C++
 struct InclinedPlane {
