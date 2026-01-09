@@ -1,9 +1,6 @@
 #pragma once
 
-#include "dependencies/glm/glm.hpp"
-#include "dependencies/glm/ext/matrix_clip_space.hpp"
 #include "dependencies/glm/ext/matrix_transform.hpp"
-#include "dependencies/glm/gtc/type_ptr.hpp"
 
 #include "dependencies/glfw-3.4/deps/glad/gl.h"
 #include "dependencies/glfw-3.4/include/GLFW/glfw3.h"
@@ -31,8 +28,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 }
 
 struct Camera {
-    glm::vec3 position = { 2.5f, 2.0f, 3.0f };
-    glm::vec3 front = { 0.0f, 0.0f, -1.0f };
+    glm::vec3 position = { 0.0, 0.0, -5 };
+    glm::vec3 front = { 0.0f, 0.0f, 1.0f };
     glm::vec3 up = { 0.0f, 1.0f, 0.0f };
 
     float yaw = -90.0f;

@@ -1,20 +1,16 @@
-#include <iostream>
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <array>
 #include <vector>
 
-#include "dependencies/glm/glm.hpp"
 #include "dependencies/glm/ext/matrix_clip_space.hpp"
 #include "dependencies/glm/ext/matrix_transform.hpp"
 #include "dependencies/glm/gtc/type_ptr.hpp"
 
 #include "dependencies/glfw-3.4/deps/glad/gl.h"
 #include "dependencies/glfw-3.4/include/GLFW/glfw3.h"
-
-#include "utils/Chest.hpp"
-#include "utils/NumericRange.hpp"
 
 #include "convenience.hpp"
 #include "Shader.hpp"
@@ -256,6 +252,7 @@ int animation_test() {
 
     constexpr size_t SIZE = 30;
     MetaballEngine<SIZE> me;
+    
     size_t m1 = me.add_metaball(glm::vec3(0.0f), tune_plane(0.f, 1.f, 0.f));
     size_t m2 = me.add_metaball(glm::vec3(1.f), tune_blob(0.6f, 0.6f, 3.f));
     size_t m3 = me.subtract_metaball(glm::vec3(1.f), tune_blob(0.6f, 0.6f, 3.f));
@@ -356,93 +353,199 @@ int animation_test() {
     return EXIT_SUCCESS;
 }
 
-int main() {
-    metaball_scenes();
-    // animation_test();
+int help() {
+    std::cout << "Please include a flag after the executable name. The options are:\n"
+    << "\t1) -animation | -a : Play an animation of a paper folding/shaking that uses metaballs\n"
+    << "\t2) -scenes | -s : View multiple rendered metaball scenes. Click left & right to change the scene. "
+    << "Move the camera by dragging w/ the mouse left-click, and travel around the scene with WASD"
+    << std::endl;
     return EXIT_SUCCESS;
 }
 
 
-// #include <ratio>
+#include <iostream>
 
-// int ratio_test() {
-//     std::ratio<10, 1> my_ratio = std::ratio<10, 1>();
-//     constexpr int res = my_ratio.num();
+#include "dependencies/glm/gtc/random.hpp"
 
-//     return 0;
-// }
+template <typename T> using Unique = std::unique_ptr<T>;
+template <typename T> using Ptr = T*;
 
-// #include <iostream>
-// #include <sstream>
-// #include <string>
+#include <metaball.hpp>
+#include <metaball_presets.hpp>
+#include <engine.hpp>
 
-// // T needs to be copyable
-// template <typename T>
-// void print_num_bytes(T type) {
-//     std::size_t bytes = sizeof(T);
-//     std::cout << bytes << " bytes" << std::endl;
-// }
+int bouncing() {
+    const glm::vec3 center = glm::vec3(0.f);
+    const float side_length = 10.f;
+    const int32_t resolution = 30;
+    const float iso_value = 1.f;
+    const int32_t num_metaballs = 10;
 
-// template <typename T>
-// void print_bitstring(T type) {
-//     const std::size_t bytes = sizeof(T);
-//     const std::size_t total_bits = bytes * 8;
-//     std::size_t bits_left = bytes * 8;
-//     std::stringstream ss;
+    mbl::MetaballEngine<mbl::Metaball<mbl::presets::KineticBlob>> engine(center, side_length, resolution, iso_value);
+    for (int i = 0; i < num_metaballs; i++) {
+        glm::vec3 position = glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f));
+        glm::vec3 velocity = glm::sphericalRand(1.f);
+        engine.add_metaball(mbl::Metaball(mbl::presets::KineticBlob(position, velocity)));
+    }
+
+    mbl::common::graphics::MeshData md = engine.construct_mesh();
+
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes (Refactor) Test").open();
+
+    unsigned int VBO, EBO;
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    // Bind Vertex Array Object first
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    // Copy vertex data into VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
+
+    // Copy index data into EBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
     
-//     while (bits_left) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         ss << bit;
-//         bits_left -= 1;
-//     }
+    Shader shader = Shader::from_file(
+        "./src/shaders/vertex/vertex_lighting.vert",
+        "./src/shaders/fragment/vertex_lighting_rgb.frag"
+    ).value();
+
+    shader.add_uniform("lightPos", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(10.f, 10.f, 10.f)[0]);
+    });
+
+    shader.add_uniform("color", [](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &glm::vec3(1.f, 0.f, 0.f)[0]);
+    });
+
+    glm::vec3 camera_pos = camera.position;
+    shader.add_uniform("camera_pos", [&camera_pos](GLuint pgrm, GLint loc) {
+        glUniform3fv(loc, 1, &camera_pos[0]);
+    });
+
+    GLuint program = shader.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+    const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
+
+    // Position attribute
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(vpos_location);
     
-//     std::cout << ss.str() << std::endl;
-// }
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+    glEnableVertexAttribArray(vpos_location);
 
-// typedef void (*callback)(int bit_idx);
+    glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
+    glEnableVertexAttribArray(vnorm_location);
 
-// // does nothing
-// void V(int bit_idx) {}
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
 
-// template <typename T>
-// void callback_on_ones(T type, callback C) {
-//     const size_t bytes = sizeof(T);
-//     const size_t total_bits = bytes * 8;
-//     size_t bits_left = total_bits;
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.f, 0.f, 0.f, 1.0f);
 
-//     std::array<callback, 2> callback_switch = {V, C};
+    const float FPS = 1.f / 30.f;
+    float lastFrame = 0.f;
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-//     while (bits_left) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         callback_switch[bit](static_cast<int>(total_bits - bits_left));
-//         bits_left -= 1;
-//     }
-// }
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
-// template <typename T>
-// void cback_on_ones(T type, callback C) {
-//     size_t bit_index = 0;
-//     std::array<callback, 2> cback_switch = {V, C};
+        process_input(win, deltaTime);
 
-//     while (type) {
-//         int bit = (int) (type & 0x1);
-//         type = type >> 1;
-//         cback_switch[bit]((int) bit_index);
-//         bit_index += 1;
-//     }
-// }
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-// void P(int bit_idx) {
-//     std::cout << "bit at bit-index: " << bit_idx << std::endl;
-// }
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view;
 
-// int main() {
-//     int n1 = 10;
-//     char c = 'a';
-//     callback_on_ones(n1, P);
-//     cback_on_ones(n1, P);
-//     return 0;
-// }
+        for (int i = 0; i < num_metaballs; i++) {
+            mbl::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+            glm::vec3& kb_pos = kb.update(deltaTime);
+
+            for (int i = 0; i < 3; i++) {
+                if (kb_pos[i] < -5.f + 1.0f) {
+                    kb_pos[i] = -4.0f;
+                    kb.m_velocity[i] *= -1;
+                } else if (kb_pos[i] > 5.f - 1.0f) {
+                    kb_pos[i] = 4.0f;
+                    kb.m_velocity[i] *= -1;
+                }
+            }
+        }
+        
+        engine.make_dirty();
+        md = engine.construct_mesh();
+        
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
+
+        // Copy index data into EBO
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
  
+        shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        glm::vec3 camera_pos = camera.position;
+        shader.add_uniform("camera_pos", [&camera_pos](GLuint pgrm, GLint loc) {
+            glUniform3fv(loc, 1, &camera_pos[0]);
+        });
+
+        shader.ping_all_uniforms().use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, (GLsizei) md.indices.size(), GL_UNSIGNED_INT, 0);
+        // glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+        
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+    
+    glfwDestroyWindow(win);
+    glfwTerminate();
+
+    return EXIT_SUCCESS;
+}
+
+int main(int argc, char* argv[]) {
+    int (*scenario)() = nullptr;
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+
+        if (arg == "-animation" || arg == "-a") {
+            scenario = animation_test;
+        } else if (arg == "-scenes" || arg == "-s") {
+            scenario = metaball_scenes;
+        } else if (arg == "-help" || arg == "-h") {
+            scenario = help;
+        } else if (arg == "-bouncing" || arg == "-b") {
+            scenario = bouncing;
+        }
+    }
+
+    if (scenario != nullptr) {
+        scenario();
+    } else {
+        std::cout << "Not a valid input." << std::endl;
+        help();
+    }
+   
+    return EXIT_SUCCESS;
+}

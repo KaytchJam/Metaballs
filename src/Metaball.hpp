@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <array>
+#include <iostream>
 // #include <ratio>
 
 #include "utils/Vector3D.hpp"
@@ -33,6 +34,57 @@ struct Metaball {
     glm::vec3 position;
     MetaFunction func;
 };
+
+/**
+ * template <typename MetaFunc>
+ * struct Metaball {
+ *      float sign;
+ *      glm::vec3 position;
+ *      MetaFunc func;
+ * };
+ */
+
+#include <sstream>
+#include <string>
+
+typedef void (*callback)(int bit_idx);
+
+// does nothing
+void V(int bit_idx) {}
+
+void P(int bit_idx) {
+    std::cout << "bit at bit-index: " << bit_idx << std::endl;
+}
+
+template <typename T>
+static void print_bitstring(T type) {
+    const std::size_t bytes = sizeof(T);
+    const std::size_t total_bits = bytes * 8;
+    std::size_t bits_left = bytes * 8;
+    std::stringstream ss;
+    
+    while (bits_left) {
+        int bit = (int) (type & 0x1);
+        type = type >> 1;
+        ss << bit;
+        bits_left -= 1;
+    }
+    
+    std::cout << ss.str() << std::endl;
+}
+
+template <typename T>
+void cback_on_ones(T type, callback C) {
+    size_t bit_index = 0;
+    std::array<callback, 2> cback_switch = {V, C};
+
+    while (type) {
+        int bit = (int) (type & 0x1);
+        type = type >> 1;
+        cback_switch[bit]((int) bit_index);
+        bit_index += 1;
+    }
+}
 
 template<size_t GRID_SIZE>
 class MetaballEngine {
@@ -154,6 +206,38 @@ private:
     
         return lerp_set;
     }
+
+    // static std::array<glm::vec3, 12> calculate_interpolations(
+    //     const std::array<control_point_t,8>& cube_cpts,
+    //     const float isovalue,
+    //     uint8_t edge_mask
+    // ) {
+    //     std::array<glm::vec3, 12> lerp_set = {};
+    //     size_t edge_index = 0;
+    //     while (edge_mask) {
+    //         const bool bit = static_cast<bool>(edge_mask & 0x1);
+    //         edge_mask = edge_mask >> 1;
+
+    //         if (bit) {
+    //             const int e1 = edge_mappings[edge_index][0];
+    //             const int e2 = edge_mappings[edge_index][1];
+
+    //             const glm::vec3& P1 = cube_cpts[e1].pos;
+    //             const float V1 = cube_cpts[e1].density;
+        
+    //             const glm::vec3& P2 = cube_cpts[e2].pos;
+    //             const float V2 = cube_cpts[e2].density;
+
+    //             float denom = V2 - V1;
+    //             if (std::abs(denom) < 1e-6f) denom = 1e-6f;
+    //             lerp_set[edge_index] = P1 + (isovalue - V1) * (P2 - P1) / denom;
+    //         }
+
+    //         edge_index += 1;
+    //     }
+
+    //     return lerp_set;
+    // }
 
     glm::vec3 gradient_at(const glm::vec3& center, const glm::vec3& p, const MetaFunction& f, float eps = 1e-3f) {
         return glm::normalize(glm::vec3(
