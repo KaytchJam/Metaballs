@@ -49,7 +49,7 @@ namespace mbl {
         public:
             /** Create a Metaball engine that constructs a `SCALAR FIELD` centered on `center` with a side length of `side_length`,
              * a resolution (# of divisions per axis in the scalar field), and an isovalue to test passed in metaballs against. */
-            MetaballEngine(const glm::vec3& center, const float side_length, const int32_t resolution, const float isovalue);
+            MetaballEngine(const glm::vec3& center, const float side_length, const int32_t resolution, const float isovalue = 1.0f);
 
             ~MetaballEngine() {}
 
@@ -277,16 +277,17 @@ namespace mbl {
 
     template <typename M>
     const common::graphics::MeshData& MetaballEngine<M>::construct_mesh() {
-        mesh_data.vertices.clear();
-        mesh_data.indices.clear();
-
-        if (is_dirty) {
-            is_dirty = false;
-            const int32_t valid_points = update_densities().num_valid_points;
-
-            mesh_data.vertices.reserve(valid_points);
-            mesh_data.indices.reserve(valid_points);
+        if (!is_dirty) {
+            return mesh_data;
         }
+
+        is_dirty = false;
+        const int32_t valid_points = update_densities().num_valid_points;
+        
+        mesh_data.vertices.clear();
+        mesh_data.vertices.reserve(valid_points);
+        mesh_data.indices.clear();
+        mesh_data.indices.reserve(valid_points);
 
         // Buffers we'll reuse multiple times in this loop
         CubeOrderedIsopoints ordered_iso_points = {};

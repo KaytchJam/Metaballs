@@ -252,6 +252,7 @@ int animation_test() {
 
     constexpr size_t SIZE = 30;
     MetaballEngine<SIZE> me;
+    
     size_t m1 = me.add_metaball(glm::vec3(0.0f), tune_plane(0.f, 1.f, 0.f));
     size_t m2 = me.add_metaball(glm::vec3(1.f), tune_blob(0.6f, 0.6f, 3.f));
     size_t m3 = me.subtract_metaball(glm::vec3(1.f), tune_blob(0.6f, 0.6f, 3.f));
@@ -362,105 +363,29 @@ int help() {
 }
 
 
-#include <fieldrange.hpp>
-#include <isosurface.hpp>
-#include <intrange.hpp>
-#include <metaball.hpp>
-#include <metaball_traits.hpp>
-#include <marcher.hpp>
-#include <engine.hpp>
-
-#include <memory>
 #include <iostream>
-#include <numeric>
-#include <iterator>
 
 #include "dependencies/glm/gtc/random.hpp"
 
 template <typename T> using Unique = std::unique_ptr<T>;
 template <typename T> using Ptr = T*;
 
-struct InverseSquareBlob {
-    glm::vec3 m_center = glm::vec3(0.0f);
-    float m_scale = 1.0;
+#include <metaball.hpp>
+#include <metaball_presets.hpp>
+#include <engine.hpp>
 
-    InverseSquareBlob(const glm::vec3& center = glm::vec3(0.0), const float scale = 1.0f) 
-        : m_center(center), m_scale(scale) {}
-
-    float operator()(float x, float y, float z) const {
-        return m_scale / (
-            (float) std::pow(m_center.x - x, 2) + 
-            (float) std::pow(m_center.y - y, 2) + 
-            (float) std::pow(m_center.z - z, 2)
-        );
-    }
-
-    BoundingBox get_bounding_box() const {
-        const glm::vec3 sqrt_of_scale_vec(sqrtf(m_scale));
-        return BoundingBox{ m_center + sqrt_of_scale_vec, m_center - sqrt_of_scale_vec };
-    }
-};
-
-struct Gaussian {
-    float variance = 1.0f;
-
-    float operator()(float x, float y, float z) const {
-        return expf(-(x*x + y*y + z*z) / (2*variance));
-    }
-};
-
-float sum_floats(float x, float y, float z) {
-    return x + y + z;
-}
-
-void print_bits(int bytes, int min_bits = 8, bool newline_terminate = false) {
-    int initial = bytes;
-    while (bytes != 0) {
-        for (int i = 0; i < min_bits; i++) {
-            std::cout << (bytes & 0x1);
-            bytes = bytes >> 1;
-        }
-    }
-
-    if (newline_terminate && initial != 0) {
-        std::cout << std::endl;
-    }
-}
-
-struct KineticBlob {
-    glm::vec3 m_center = glm::vec3(0.f);
-    glm::vec3 m_velocity = glm::vec3(0.f);
-    float m_scale = 1.f;
-
-    KineticBlob(const glm::vec3& center = glm::vec3(0.0), const glm::vec3& velocity = glm::vec3(0.0), const float scale = 1.0f) 
-        : m_center(center), m_velocity(velocity), m_scale(scale) {}
-
-    float operator()(float x, float y, float z) const {
-        return m_scale / (
-            (float) std::pow(m_center.x - x, 2) + 
-            (float) std::pow(m_center.y - y, 2) + 
-            (float) std::pow(m_center.z - z, 2)
-        );
-    }
-
-    glm::vec3& update(const float dt) {
-        m_center = m_center + m_velocity * dt;
-        return m_center;
-    }
-};
-
-int test() {
+int bouncing() {
     const glm::vec3 center = glm::vec3(0.f);
     const float side_length = 10.f;
     const int32_t resolution = 30;
     const float iso_value = 1.f;
     const int32_t num_metaballs = 10;
 
-    mbl::MetaballEngine<mbl::Metaball<KineticBlob>> engine(center, side_length, resolution, iso_value);
+    mbl::MetaballEngine<mbl::Metaball<mbl::presets::KineticBlob>> engine(center, side_length, resolution, iso_value);
     for (int i = 0; i < num_metaballs; i++) {
         glm::vec3 position = glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f));
         glm::vec3 velocity = glm::sphericalRand(1.f);
-        engine.add_metaball(mbl::Metaball(KineticBlob(position, velocity)));
+        engine.add_metaball(mbl::Metaball(mbl::presets::KineticBlob(position, velocity)));
     }
 
     mbl::common::graphics::MeshData md = engine.construct_mesh();
@@ -549,7 +474,7 @@ int test() {
         glm::mat4 mvp = proj * view;
 
         for (int i = 0; i < num_metaballs; i++) {
-            KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+            mbl::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
             glm::vec3& kb_pos = kb.update(deltaTime);
 
             for (int i = 0; i < 3; i++) {
@@ -610,8 +535,8 @@ int main(int argc, char* argv[]) {
             scenario = metaball_scenes;
         } else if (arg == "-help" || arg == "-h") {
             scenario = help;
-        } else if (arg == "-test" || arg == "-t") {
-            scenario = test;
+        } else if (arg == "-bouncing" || arg == "-b") {
+            scenario = bouncing;
         }
     }
 

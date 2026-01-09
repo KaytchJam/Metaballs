@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <metaball_traits.hpp>
+#include <typeinfo>
 
 namespace mbl {
     /** A run-time interface for Metaballs */ 
@@ -12,7 +13,9 @@ namespace mbl {
         DynamicMetaball() {}
         ~DynamicMetaball() {}
         virtual float operator()(float x, float y, float z) const = 0;
-        virtual float compute(const glm::vec3& v) const = 0;
+        virtual float compute(const glm::vec3& v) const {
+            return (*this)(v.x, v.y, v.z);
+        }
     };
 
     /** A compile-time interface for Metaballs */
@@ -111,7 +114,9 @@ namespace mbl {
         std::function<float(float,float,float)> m_scalar_func;
     public:
         template <typename T>
-        explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {}
+        explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {
+            static_assert(mbl::IsScalarFunction<T>::value, "mbl::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
+        }
     
         template <typename Derived>
         AggregateMetaball(const MetaballExpression<Derived>& expr)
@@ -121,6 +126,15 @@ namespace mbl {
         
         float operator()(float x, float y, float z) const {
             return m_scalar_func(x, y, z);
+        }
+
+        template <typename T>
+        T* target() {
+            return m_scalar_func.target<T>();
+        }
+
+        const std::type_info& target_info() {
+            return m_scalar_func.target_type();
         }
     };
     
