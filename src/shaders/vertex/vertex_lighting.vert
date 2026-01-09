@@ -10,6 +10,6 @@ out vec4 wsPos;
 
 void main() {
     normal = pNorm;
-    wsPos = MVP * vec4(pPos, 1.0);
+    wsPos = vec4(pPos, 1.0);
     gl_Position = MVP * vec4(pPos, 1.0);
 }

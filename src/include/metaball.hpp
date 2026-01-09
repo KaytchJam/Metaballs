@@ -105,7 +105,7 @@ namespace mbl {
     
     /** Metaball that uses type erasure to aggregate other Metaball types. Though
      * it's "Heavier" than other metaball types, it can consume vector expressions 
-     * with undergoing a type change, unlike the normal Metaball<>. */
+     * without undergoing a type change, unlike the normal Metaball<>. */
     class AggregateMetaball : public MetaballExpression<AggregateMetaball> {
     private:
         std::function<float(float,float,float)> m_scalar_func;

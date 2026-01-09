@@ -13,8 +13,8 @@
 namespace mbl {
     typedef std::array<glm::vec3,12> LerpedEdgePoints; // Interpolated Edge Points
     typedef std::array<IsoPoint*,8> CubeOrderedIsopoints; // Isopoints reordered to match `edge_mappings`
-    typedef std::array<common::Vertex, 12> OutVertices; // Cube vertices to be copied out
-    typedef std::array<int32_t, 12> OutIndices; // Cube indices to be copied out
+    typedef std::array<common::graphics::Vertex, 16> OutVertices; // Cube vertices to be copied out
+    typedef std::array<int32_t, 16> OutIndices; // Cube indices to be copied out
 
     /** Struct returned from MetaballEngine::compute_cube_bits. Returns the cube bit 'index' of a given
      * CubeView to be used to index into `edge_table` and `edge_mappings`. */
@@ -31,7 +31,8 @@ namespace mbl {
         const OutIndices& indices;
     };
 
-    template <typename M>
+    /** Engine for the construction of Metaballs */
+    template <typename M = AggregateMetaball>
     class MetaballEngine {
         private:
             static_assert(std::is_base_of<DynamicMetaball, M>::value, "engine.hpp: MetaballEngine<M> -> M is not a type derived from DynamicMetaball.");
@@ -43,20 +44,39 @@ namespace mbl {
             bool is_dirty = true;
 
             int32_t num_valid_points = 0;
-            common::MeshData mesh_data;
+            common::graphics::MeshData mesh_data;
 
         public:
+            /** Create a Metaball engine that constructs a `SCALAR FIELD` centered on `center` with a side length of `side_length`,
+             * a resolution (# of divisions per axis in the scalar field), and an isovalue to test passed in metaballs against. */
             MetaballEngine(const glm::vec3& center, const float side_length, const int32_t resolution, const float isovalue);
 
             ~MetaballEngine() {}
 
-            MetaballEngine<M>& add_metaball(M&& m) {
+            /** Add a metaball to this metaball engine. The index of the metaball is returned. */
+            size_t add_metaball(M&& m) {
+                size_t index = balls.size();
                 balls.push_back(m);
+                is_dirty = true;
+                return index;
+            }
+
+            /** Get the metaball in this Metaball Engine at index i */
+            M& get_metaball(size_t i) {
+                return balls[i];
+            }
+
+            MetaballEngine<M>& make_dirty() {
                 is_dirty = true;
                 return *this;
             }
 
-            MetaballEngine<M>& set_isovalue(const float isovalue) { this->isovalue = isovalue; return *this; }
+            /** Set the current isovalue of the Metaball engine to a different value */
+            MetaballEngine<M>& set_isovalue(const float p_isovalue) { 
+                this->is_dirty = dirty || (p_isovalue != isovalue);
+                this->isovalue = p_isovalue;
+                return *this; 
+            }
 
             /** Returns the sum of all metaballs in the metaball engine
              * given x, y, and z coordinates. */
@@ -90,7 +110,7 @@ namespace mbl {
 
             /** Given an IsoField with set densities, constructs vertex
              * data from said field. */
-            const common::MeshData& construct_mesh();
+            const common::graphics::MeshData& construct_mesh();
     };
 
     // MetaballEngine implementations
@@ -137,7 +157,7 @@ namespace mbl {
         const glm::vec3 mdz = p - dx;
 
         std::array<float, 6> neighbors = {};
-        for (const AggregateMetaball& m : balls) {
+        for (const M& m : balls) {
             neighbors[0] += m.compute(pdx);
             neighbors[1] += m.compute(mdx);
             neighbors[2] += m.compute(pdy);
@@ -225,7 +245,7 @@ namespace mbl {
         OutVertices& out_vertices, 
         OutIndices& out_indices
     ) {
-        const int (&edge_ordering)[16] = triTable[cube_bits];
+        const int32_t (&edge_ordering)[16] = triTable[cube_bits];
         int32_t eoi = 0;
 
         while (edge_ordering[eoi] != -1 && eoi < 16) {
@@ -256,7 +276,7 @@ namespace mbl {
     }
 
     template <typename M>
-    const common::MeshData& MetaballEngine<M>::construct_mesh() {
+    const common::graphics::MeshData& MetaballEngine<M>::construct_mesh() {
         mesh_data.vertices.clear();
         mesh_data.indices.clear();
 
