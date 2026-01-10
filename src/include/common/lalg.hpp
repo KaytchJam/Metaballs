@@ -20,8 +20,12 @@ namespace mbl {
 
             template <typename T, size_t N, typename Derived>
             struct VecExpression {
+                const Derived& to_derived() const {
+                    return static_cast<const Derived&>(*this);
+                }
+
                 T operator[](size_t i) const {
-                    return static_cast<const Derived&>(*this)[i];
+                    return to_derived()[i];
                 }
 
                 constexpr size_t size() const {
@@ -30,7 +34,7 @@ namespace mbl {
 
                 template <typename OtherDerivation>
                 bool operator==(const VecExpression<T,N,OtherDerivation>& other) const {
-                    const Derived& v = static_cast<const Derived&>(*this);
+                    const Derived& v = to_derived();
                     for (size_t i = 0; i < N; i++) {
                         if (v[i] != other[i]) {
                             return false;
@@ -146,7 +150,7 @@ namespace mbl {
                 typename std::conditional<Exp2::is_leaf, const Exp2&, const Exp2>::type w;
             public:
 
-                SubVec(const Exp1& e1, const Exp2& e2) : v(v), w(w) {
+                SubVec(const Exp1& e1, const Exp2& e2) : v(e1), w(e2) {
                     static_assert(std::is_same<typename Exp1::value_type, typename Exp2::value_type>::value);
                 }
 
@@ -205,32 +209,32 @@ namespace mbl {
             
             template <typename T, size_t N, typename E1, typename E2>
             SumVec<T,N,E1,E2> operator+(const VecExpression<T,N,E1>& v, const VecExpression<T,N,E2>& w) {
-                return SumVec<T,N,E1,E2>(static_cast<const E1&>(v), static_cast<const E2&>(w));
+                return SumVec<T,N,E1,E2>(v.to_derived(), w.to_derived());
             }
 
             template <typename T, size_t N, typename E1, typename E2>
             SubVec<T,N,E1,E2> operator-(const VecExpression<T,N,E1>& v, const VecExpression<T,N,E2>& w) {
-                return SubVec<T,N,E1,E2>(static_cast<const E1&>(v), static_cast<const E2&>(w));
+                return SubVec<T,N,E1,E2>(v.to_derived(), w.to_derived());
             }
 
             template <typename T, size_t N, typename E1>
             ScaleVec<T,N,E1,int32_t> operator-(const VecExpression<T,N,E1>& v) {
-                return ScaleVec<T,N,E1,int32_t>(static_cast<const E1&>(v), -1);
+                return ScaleVec<T,N,E1,int32_t>(v.to_derived(), -1);
             }
 
             template <typename T, size_t N, typename E1, typename Scalar>
             ScaleVec<T,N,E1,Scalar> operator*(Scalar scalar, const VecExpression<T,N,E1>& v) {
-                return ScaleVec<T,N,E1,Scalar>(static_cast<const E1&>(v), scalar);
+                return ScaleVec<T,N,E1,Scalar>(v.to_derived(), scalar);
             }
 
             template <typename T, size_t N, typename E1, typename Scalar>
             ScaleVec<T,N,E1,Scalar> operator*(const VecExpression<T,N,E1>& v, Scalar scalar) {
-                return ScaleVec<T,N,E1,Scalar>(static_cast<const E1&>(v), scalar);
+                return ScaleVec<T,N,E1,Scalar>(v.to_derived(), scalar);
             }
 
             template <typename T, size_t N, typename E1, typename Scalar>
             DivisorVec<T,N,E1,Scalar> operator/(const VecExpression<T,N,E1>& v, Scalar scalar) {
-                return DivisorVec<T,N,E1,Scalar>(static_cast<const E1&>(v), scalar);
+                return DivisorVec<T,N,E1,Scalar>(v.to_derived(), scalar);
             }
 
             template <typename T, size_t N, typename D1, typename D2, typename BinaryMap>
@@ -270,18 +274,15 @@ namespace mbl {
             }
 
             template <typename T, size_t N, typename E1, typename E2>
-            T cosineOf(const VecExpression<T,N,E1>& v, const VecExpression<T,N,E2>& w) {
+            T cosine_of(const VecExpression<T,N,E1>& v, const VecExpression<T,N,E2>& w) {
                 return (dot(v, w) / (magnitude(v) * magnitude(w)));
             }
-
 
             /** HYBRID LAZY + EAGER */
 
             template <typename T, size_t N, typename E1>
             DivisorVec<T,N,Vec<T,N>,T> unit(const VecExpression<T,N,E1>& v) {
-                Vec<T,N> v_evaluated = v;
-                const T mag = magnitude(v_evaluated);
-                return v_evaluated / mag;
+                return v / magnitude(v_evaluated);
             }
 
             template <typename T, size_t N, typename E1, typename E2>
@@ -292,6 +293,270 @@ namespace mbl {
 
             template <typename T, typename E1, typename E2>
             Vec<T,3> cross(const VecExpression<T,3,E1>& v, const VecExpression<T,3,E2>& w) {
+                Vec<T,3> i(1.0, 0.0, 0.0);
+                Vec<T,3> j(0.0, 1.0, 0.0);
+                Vec<T,3> k(0.0, 0.0, 1.0);
+
+                return ((v[1] * w[2] - v[2] * v[1]) * i) 
+                - ((v[0] * w[2] - v[2] * w[0]) * j)
+                + ((v[0] * w[1] - v[1] * w[0]) * k);
+            }
+
+            using Vec3 = Vec<float,3>;
+            using IVec3 = Vec<int32_t,3>;
+        }
+
+        namespace lalg2 {
+            template<typename V>
+            struct VecTraits;
+
+            template<typename V>
+            using VecValue = typename VecTraits<V>::value_type;
+
+            template<typename V>
+            constexpr size_t VecSize = VecTraits<V>::size;
+
+            template<typename T>
+            using HasSubscript = decltype(std::declval<const T&>()[0]);
+
+            template <typename T, size_t N>
+            struct Vec {
+                T data[N];
+
+                using value_type = T;
+                static constexpr size_t size = N;
+
+                constexpr T& operator[](size_t i)       { return data[i]; }
+                constexpr const T& operator[](size_t i) const { return data[i]; }
+
+                Vec() = default;
+
+                template<typename Expr>
+                Vec(const Expr& e) {
+                    for (size_t i=0; i< N; i++) {
+                        data[i] = e[i];
+                    }
+                }
+
+                // template<typename Expr>
+                // Vec& operator=(const Expr& e) {
+                //     static_assert(size_v<Expr> == N, "Vector size mismatch");
+                //     for (size_t i = 0; i < N; i++) {
+                //         data[i] = e[i];
+                //     }
+                //     return *this;
+                // }
+            };
+
+            template <typename T>
+            struct Vec<T,3> {
+                union {
+                    T data[3];
+                    struct { T x, y, z; };
+                };
+
+                using value_type = T;
+                static constexpr size_t size = 3;
+
+                constexpr T& operator[](size_t i)       { return data[i]; }
+                constexpr const T& operator[](size_t i) const { return data[i]; }
+
+                Vec() : x(),y(),z() {}
+                Vec(T a,T b,T c) : x(a),y(b),z(c) {}
+                Vec(const T& t) : x(t), y(t), z(t) {}
+
+                template<typename Expr, typename = HasSubscript<Expr>>
+                Vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]) {}
+
+                template <typename Expr, typename = HasSubscript<Expr>>
+                Vec& operator+=(const Expr& rhs) {
+                    static_assert(VecSize<Expr> == 3);
+                    x += rhs[0];
+                    y += rhs[1];
+                    z += rhs[2];
+                    return *this;
+                }
+
+                template <typename Expr, typename = HasSubscript<Expr>>
+                Vec& operator-=(const Expr& rhs) {
+                    static_assert(VecSize<Expr> == 3);
+                    x -= rhs[0];
+                    y -= rhs[1];
+                    z -= rhs[2];
+                    return *this;
+                }
+
+                Vec& operator*=(const T scalar) {
+                    x *= scalar;
+                    y *= scalar;
+                    z *= scalar;
+                    return *this;
+                }
+
+                Vec& operator/=(const T scalar) {
+                    x /= scalar;
+                    y /= scalar;
+                    z /= scalar;
+                    return *this;
+                }
+            };
+
+            template<typename T,size_t N>
+            struct VecTraits<Vec<T,N>> {
+                using value_type = T;
+                static constexpr size_t size = N;
+            };
+            
+            template<typename L, typename R>
+            struct SumVec {
+                const L& a;
+                const R& b;
+                
+                using value_type = VecValue<L>;
+                static constexpr size_t size = VecSize<L>;
+
+                value_type operator[](size_t i) const { return a[i] + b[i]; }
+            };
+            
+            template<typename L, typename R>
+            struct SubVec {
+                const L& a;
+                const R& b;
+
+                using value_type = VecValue<L>;
+                static constexpr size_t size = VecSize<L>;
+                
+                value_type operator[](size_t i) const { return a[i] - b[i]; }
+            };
+            
+            template<typename V, typename S>
+            struct ScaleVec {
+                const V& v;
+                S s;
+
+                using value_type = VecValue<V>;
+                static constexpr size_t size = VecSize<V>;
+                
+                value_type operator[](size_t i) const { return v[i] * s; }
+            };
+            
+            template<typename V, typename S>
+            struct DivVec {
+                const V& v;
+                S s;
+
+                using value_type = VecValue<V>;
+                static constexpr size_t size = VecSize<V>;
+
+                value_type operator[](size_t i) const { return v[i] / s; }
+            };
+
+            template<typename L, typename R>
+            struct VecTraits<SumVec<L,R>> {
+                using value_type = VecValue<L>;
+                static constexpr size_t size = VecSize<L>;
+            };
+
+            template<typename L, typename R>
+            struct VecTraits<SubVec<L,R>> {
+                using value_type = VecValue<L>;
+                static constexpr size_t size = VecSize<L>;
+            };
+
+            template<typename V, typename S>
+            struct VecTraits<ScaleVec<V,S>> {
+                using value_type = VecValue<V>;
+                static constexpr size_t size = VecSize<V>;
+            };
+
+            template<typename V, typename S>
+            struct VecTraits<DivVec<V,S>> {
+                using value_type = VecValue<V>;
+                static constexpr size_t size = VecSize<V>;
+            };
+
+
+            template<typename L, typename R>
+            SumVec<L,R> operator+(const L& l, const R& r) {
+                static_assert(VecSize<L> == VecSize<R>);
+                return SumVec<L,R>{l,r};
+            }
+            
+            template<typename L, typename R>
+            SubVec<L,R> operator-(const L& l, const R& r) {
+                static_assert(VecSize<L> == VecSize<R>);
+                return SubVec<L,R>{l,r};
+            }
+
+            template<typename V, typename S, typename = HasSubscript<V>>
+            ScaleVec<V,S> operator*(const V& v, S s) {
+                return ScaleVec<V,S>{v,s};
+            }
+
+            template<typename V, typename S, typename = HasSubscript<V>>
+            ScaleVec<V,S> operator*(S s, const V& v) {
+                return ScaleVec<V,S>{v,s};
+            }
+
+            template<typename V, typename S>
+            DivVec<V,S> operator/(const V& v, S s) {
+                return DivVec<V,S>{v,s};
+            }
+
+            template <typename L, typename R>
+            bool operator==(const L& l, const R& r) {
+                static_assert(VecSize<L> == VecSize<R>);
+                for (int i = 0; i < VecSize<L>; i++) {
+                    if (l[i] != r[i]) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            template <typename L, typename R>
+            bool operator!=(const L& l, const R& r) {
+                return !(l == r);
+            }
+
+            template <typename L, typename R>
+            VecValue<L> dot(const L& v, const R& w) {
+                static_assert(VecSize<L> == VecSize<R>);
+                using T = VecValue<L>;
+                T acc = {};
+                for (int i = 0; i < VecSize<L>; i++) {
+                    acc += v[i] * w[i];
+                }
+                return acc;
+            }
+
+            template <typename V>
+            float magnitude(const V& v) {
+                return std::sqrt((float) dot(v, v));
+            }
+
+            template <typename L, typename R>
+            float cosine_of(const L& v, const R& w) {
+                return (dot(v, w) / (magnitude(v) * magnitude(w)));
+            }
+
+            /** HYBRID LAZY + EAGER */
+
+            template <typename V>
+            Vec<float, VecSize<V>> unit(const V& v) {
+                return v / magnitude(v);
+            }
+
+            template <typename L, typename R>
+            ScaleVec<L, float> projectOnto(const L& v, const R& onto) {
+                Vec<T,N> b_unit = unit(onto);
+                return dot(v, b_unit) * b_unit;
+            }
+
+            template <typename L, typename R>
+            Vec<VecValue<L>,3> cross(const L& v, const R& w) {
+                using T = VecValue<L>;
                 Vec<T,3> i(1.0, 0.0, 0.0);
                 Vec<T,3> j(0.0, 1.0, 0.0);
                 Vec<T,3> k(0.0, 0.0, 1.0);
