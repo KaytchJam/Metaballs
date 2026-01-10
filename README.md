@@ -4,7 +4,7 @@
 
 Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the build folder. Project was built with windows in mind. Not too sure how this all runs on linux machines in complete honesty!
 
-For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using GLFW, GLAD, and GLM. Run the executable with flags `-a` to see a simple animated seen of a plane getting "folded". Run the executable with flags `-b` to see the bouncing balls scene. Lastly run the executable with flags `-s` to see static meshes of various Metaballs. When running `-s` you can click the left and right arrows to change the Metaball displayed.
+For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using GLFW, GLAD, and GLM. Run the executable with flags `-a` to see a simple animated scene of a plane getting "folded". Run the executable with flags `-b` to see the bouncing balls scene. Lastly run the executable with flags `-s` to see static meshes of various Metaballs. When running `-s` you can click the left and right arrows to change the Metaball displayed.
 
 ### Basic Features
 
