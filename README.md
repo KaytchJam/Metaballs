@@ -4,7 +4,7 @@
 
 Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the build folder. Project was built with windows in mind. Not too sure how this all runs on linux machines in complete honesty!
 
-For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using GLFW, GLAD, and GLM. Run the executable with flags `-a` to see a simple animated scene of a plane getting "folded". Run the executable with flags `-b` to see the bouncing balls scene. Lastly run the executable with flags `-s` to see static meshes of various Metaballs. When running `-s` you can click the left and right arrows to change the Metaball displayed.
+For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using **GLFW**, **GLAD**, and **GLM**. Run the executable with flags `-a` to see a simple animated scene of a plane getting "folded". Run the executable with flags `-b` to see the bouncing balls scene. Lastly run the executable with flags `-s` to see static meshes of various Metaballs. When running `-s` you can click the left and right arrows to change the Metaball displayed.
 
 ### Basic Features
 
@@ -41,13 +41,12 @@ Furthermore, the Metaball Engine is templated over a type 'M' which represents a
 #include <engine.hpp>
 // Create a cube-shaped scalar field centered at point "p" in world space,
 // with side lengths "l", and # of divisions per axis (aka resolution) "r", 
-// and lastly, isovalue (or threshold) "i" 1.0 via MetaballEngine<M> where
-// M is the Metaball type the MetaballEngine is templated over. 
-has
+// and lastly, isovalue (or threshold) "i" via MetaballEngine<M> where
+// M is the Metaball type the MetaballEngine is templated over.
 glm::vec3 position = glm::vec3(0.f, 0.f, 0.f);
 float side_length = 20.0f;
 float resolution = 10.0f;
-float isovalue = 1.0;
+float isovalue = 1.0f;
 
 // Aggregate metaball is a metaball that can 'take in' any other metaball
 mbl::MetaballEngine<mbl::AggregateMetaball> M(position, side_length, resolution, isovalue);
@@ -182,15 +181,8 @@ for (int i = 0; i < num_metaballs; i++) {
 }
 
 // Get the new mesh after the update
-mbl::common::graphics MeshData md = engine.make_dirty().construct_mesh();
+mbl::common::graphics::MeshData md = engine.make_dirty().construct_mesh();
 ```
-
-
-
-
-
-
-
 
 #### References:
 
@@ -202,14 +194,32 @@ William E. Lorensen and Harvey E. Cline. 1987. Marching cubes: A high resolution
 
 [2] http://www.paulbourke.net/geometry/polygonise/
 
-### EXAMPLES
+### EXAMPLE GEOMETRIES
+
+###### Cube Shape 
+
+$${\sum_{i=1}^{N}(\frac{1}{(x_i-x)^4 + (y_i-y)^4 + (z_i-z)^4})}$$
 
 ![Marching Cube Metaball Example - Cube](./assets/mc_example_cube.PNG)
 
+###### Blob + Cube 
+
+$${\sum_{i=1}^{N_C}\frac{1}{(x_i-x)^4 + (y_i-y)^4 + (z_i-z)^4}} + \sum_{i=1}^{N_B}\frac{1}{(x_i-x)^2 + (y_i-y)^2 + (z_i-z)^2}$$
+
 ![Marching Cube Metaball Example - Ball plus Cube](./assets/mc_example_cube_plus_ball.PNG)
+
+###### Gyroid
 
 ![Marching Cube Metaball Example - Gyroid](./assets/mc_example_gyroid.PNG)
 
+###### Blob
+
+$$\sum_{i=1}^{N}\frac{1}{c_{i1}(x_i-x)^2 + c_{i2}(y_i-y)^2 + c_{i3}(z_i-z)^2}$$
+
 ![Marching Cube Metaball Example - Balls Multiple](./assets/mc_example_balls_multiple.png)
+
+###### Plane + Blob
+
+$$\sum_{i=1}^{N_P}(c_{i1}x+c_{i2}y+c_{i3}z) + \sum_{i=1}^{N_B}\frac{s_i}{(x_i-x)^2 + (y_i-y)^2 + (z_i-z)^2}$$
 
 ![Marching Cube Metaball Example - Warped Plane](./assets/mc_example_plane_warped.png)
