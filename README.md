@@ -6,11 +6,11 @@ Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the b
 
 For this project I implemented Marching Cubes along with various Metaballs. The project is done in C++ using **GLFW**, **GLAD**, and **GLM**. Run the executable with flags `-a` to see a simple animated scene of a plane getting "folded". Run the executable with flags `-b` to see the bouncing balls scene. Lastly run the executable with flags `-s` to see static meshes of various Metaballs. When running `-s` you can click the left and right arrows to change the Metaball displayed.
 
-| Flag       | Full Flag Name        | Functionality                  |
-| :----------- | :-------------- | :------------------------- |
-| -a | -animation | Rippling plane animation  |
-| -s    | -scenes   | Static metaball showcase |
-| -b | -bouncing | Bouncing metaball showcase
+| Flag | Full Flag Name | Functionality              |
+| :--- | :------------- | :------------------------- |
+| -a   | -animation     | Rippling plane animation   |
+| -s   | -scenes        | Static metaball showcase   |
+| -b   | -bouncing      | Bouncing metaball showcase |
 
 ### Basic Features
 
@@ -88,7 +88,7 @@ The simplest way to do this is by passing in a `lambda (float x, float y, float 
 mbl::Metaball m = mbl::Metaball([](float x, float y, float z) -> float { return x + y + z; })
 ```
 
-A disadvantage of this approach is that you lose type info and end up with a fairly "uninteresting" Metaball. An approach that remedies this is by taking our `InclinedPlane` struct and passing it into the `Metaball` just like we did with the lambda. In this scenario it's not necessary for `InclinedPlane` to implement `DynamicMetaball` itself, as it is wrapped by the `Metaball` time which implements `DynamicMetaball`. With that said `InclinedPlane` still needs to have the overload on `float operator()(float,float,float)`.
+A disadvantage of this approach is that you lose type info and end up with a fairly "uninteresting" Metaball. An approach that remedies this is by taking our `InclinedPlane` struct and passing it into the `Metaball` just like we did with the lambda. In this scenario it's not necessary for `InclinedPlane` to implement `DynamicMetaball` itself, as it is wrapped by the `Metaball` time which implements `DynamicMetaball`. However, `InclinedPlane` still needs to have the overload on `float operator()(float,float,float)`.
 
 ```C++
 struct InclinedPlane {
