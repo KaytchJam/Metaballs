@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(metaballs)
 
 # c++ ver
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(DEP_DIR src/dependencies)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
