@@ -73,8 +73,8 @@ namespace mbl {
 
             /** Set the current isovalue of the Metaball engine to a different value */
             MetaballEngine<M>& set_isovalue(const float p_isovalue) { 
-                this->is_dirty = dirty || (p_isovalue != isovalue);
-                this->isovalue = p_isovalue;
+                is_dirty = is_dirty || (p_isovalue != isovalue);
+                isovalue = p_isovalue;
                 return *this; 
             }
 
