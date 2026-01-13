@@ -1,6 +1,7 @@
 # cmake is hell
 cmake_minimum_required(VERSION 3.5)
 project(metaballs)
+include(Ctest)
 
 # c++ ver
 set(CMAKE_CXX_STANDARD 20)
@@ -20,6 +21,7 @@ target_include_directories(glad PUBLIC ${DEP_DIR}/glad/include)
 # add executables
 add_executable(metaballs src/main.cpp src/fieldrange.cpp src/intrange.cpp src/isosurface.cpp src/marcher.cpp)
 add_executable(lt src/tests/lalg_test.cpp)
+add_test(NAME lt COMMAND lt)
 
 target_include_directories(metaballs PRIVATE src/include)
 target_include_directories(metaballs PRIVATE ${DEP_DIR}/glad/include)

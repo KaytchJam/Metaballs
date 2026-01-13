@@ -441,6 +441,7 @@ namespace mbl {
 
             using Vec3 = Vec<float,3>;
             using IVec3 = Vec<int32_t,3>;
+            using DVec3 = Vec<double,3>;
         }
     }
 }

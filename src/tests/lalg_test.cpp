@@ -392,4 +392,6 @@ int main() {
         count += 1;
     }
     std::cout << "========================\n" << successes << "/" << count << " correct.\n========================" << std::endl;
+
+    return EXIT_SUCCESS;
 }
