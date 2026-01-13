@@ -4,7 +4,7 @@
 
 [![Video Title](https://img.youtube.com/vi/GkIUIajTTPo/0.jpg)](https://www.youtube.com/watch?v=GkIUIajTTPo)
 
-**Least Compatible C++ Version = C++ 20**
+**Minumum CPP Required: C++20**
 
 Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the build folder. Project was built with windows in mind. Not too sure how this all runs on linux machines in complete honesty!
 
