@@ -313,6 +313,14 @@ TestResult map_pow_test() {
     };
 }
 
+TestResult fold_sum() {
+    Vec3 v(1, 2, 3);
+    return {
+        Vec3(6),
+        Vec3(fold(v, 0.f, [](float a, float b){ return a + b; }))
+    };
+}
+
 int main() {
     TestItem tests[] = { 
         { "Add #1", add_test },
@@ -338,7 +346,8 @@ int main() {
         { "Multiple Composition #1", compose_elementwise_add_magnitude },
         { "Ray-Plane Intersection #1", ray_plane_intersection_point_test },
         { "Ray-Sphere Interesection #1", ray_sphere_intersection_test },
-        { "Map Test #1"}
+        { "Map Test #1", map_pow_test },
+        { "Fold #1", fold_sum }
     };
     
     std::cout << "LALG TESTS\n========================" << std::endl;

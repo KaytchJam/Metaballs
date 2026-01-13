@@ -38,6 +38,15 @@ namespace mbl {
             template <typename F, typename S>
             using UnaryOpResult = std::invoke_result_t<F,S>;
 
+            template<typename V>
+            concept VecLike =
+                requires {
+                    typename VecTraits<V>::value_type;
+                    { VecTraits<V>::size } -> std::convertible_to<size_t>;
+                } && 
+                requires (const V& v) { v[0]; 
+            };
+
             template <typename T, size_t N>
             struct Vec {
                 T data[N];
@@ -236,31 +245,31 @@ namespace mbl {
                 return SubVec<L,R>{l,r};
             }
 
-            template<typename V, typename S, typename = HasSubscript<V>>
+            template<VecLike V, typename S>
             ScaleVec<V,S> operator*(const V& v, S s) {
                 return ScaleVec<V,S>{v,s};
             }
 
-            template<typename V, typename S, typename = HasSubscript<V>>
+            template<VecLike V, typename S>
             ScaleVec<V,S> operator*(S s, const V& v) {
                 return ScaleVec<V,S>{v,s};
             }
 
-            template<typename V, typename S>
+            template<VecLike V, typename S>
             DivVec<V,S> operator/(const V& v, S s) {
                 return DivVec<V,S>{v,s};
             }
             
-            template <typename L, typename R, typename B>
-            BinaryMapVec<L,R,B> mapply(const L& l, const R& r, const B& b) {
+            template <VecLike L, VecLike R, typename BinaryMap> requires std::is_invocable_v<BinaryMap,VecValue<L>,VecValue<R>>
+            BinaryMapVec<L,R,BinaryMap> mapply(const L& l, const R& r, const BinaryMap& b) {
                 static_assert(VecSize<L> == VecSize<R>,
                     "lalg::mapply(Vec<L> lhs, Vec<R> rhs): lhs and rhs must have the same size."
                 );
                 
-                return BinaryMapVec<L,R,B>{l,r,b};
+                return BinaryMapVec<L,R,BinaryMap>{l,r,b};
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             bool operator==(const L& l, const R& r) {
                 static_assert(VecSize<L> == VecSize<R>, "lalg::operator==(Vec<L> lhs, Vec<R> rhs): lhs and rhs must have the same size.");
 
@@ -272,17 +281,17 @@ namespace mbl {
                 return true;
             }
             
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             bool operator!=(const L& l, const R& r) {
                 return !(l == r);
             }
 
-            template <typename V, typename M>
-            MapVec<V,M> map(const V& v, const M& m) {
-                return MapVec<V,M>{v,m};
+            template <VecLike V, typename Map> requires std::is_invocable_v<Map, VecValue<V>>
+            MapVec<V,Map> map(const V& v, const Map& m) {
+                return MapVec<V,Map>{v,m};
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             VecValue<L> dot(const L& v, const R& w) {
                 static_assert(VecSize<L> == VecSize<R>, "lalg::cosine_of(Vec<L> lhs, Vec<R> rhs): lhs and rhs must have the same size.");
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::dot(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
@@ -295,12 +304,12 @@ namespace mbl {
                 return acc;
             }
 
-            template <typename V>
+            template <VecLike V>
             float magnitude(const V& v) {
                 return std::sqrt((float) dot(v, v));
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             float cosine_of(const L& v, const R& w) {
                 static_assert(VecSize<L> == VecSize<R>, "lalg::cosine_of(Vec<L> lhs, Vec<R> rhs): lhs and rhs must have the same size.");
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::cosine_of(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
@@ -323,19 +332,19 @@ namespace mbl {
 
             /** HYBRID LAZY + EAGER */
 
-            template <typename V>
+            template <VecLike V>
             DivVec<V,float> unit(const V& v) {
                 return v / magnitude(v);
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             Vec<VecValue<L>,VecSize<L>> project_onto(const L& v, const R& onto) {
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::project_onto(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
                 Vec<float,VecSize<L>> b_unit = unit(onto);
                 return dot(v, b_unit) * b_unit;
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             Vec<OpResult<std::multiplies<>, VecValue<L>, VecValue<R>>,3> cross(const L& v, const R& w) {
                 using T = OpResult<std::multiplies<>, VecValue<L>, VecValue<R>>;
                 Vec<T,3> i(1.0, 0.0, 0.0);
@@ -347,7 +356,7 @@ namespace mbl {
                 + ((v[0] * w[1] - v[1] * w[0]) * k);
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             auto max(const L& l, const R& r) {
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::max(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
 
@@ -355,7 +364,7 @@ namespace mbl {
                 return mapply(l, r, [](const T& a, const T& b) -> T { return std::max(a,b); });
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             auto min(const L& l, const R& r) {
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::min(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
 
@@ -363,13 +372,21 @@ namespace mbl {
                 return mapply(l, r, [](const T& a, const T& b) -> T { return std::min(a,b); });
             }
 
-            template <typename L, typename R>
+            template <VecLike L, VecLike R>
             auto elementwise(const L& l, const R& r) {
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::min(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
 
                 using T1 = VecValue<L>;
                 using T2 = VecValue<R>;
                 return mapply(l, r, [](const T1& a, const T2& b){ return a * b; });
+            }
+
+            template <VecLike V, typename Fold> requires std::is_invocable_v<Fold,VecValue<V>,VecValue<V>>
+            VecValue<V> fold(const V& v, VecValue<V> accumulator, const Fold& f) {
+                for (size_t i = 0; i < VecSize<V>; i++) {
+                    accumulator = f(accumulator, v[i]);
+                }
+                return accumulator;
             }
 
             using Vec3 = Vec<float,3>;
