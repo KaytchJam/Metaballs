@@ -116,18 +116,9 @@ TestResult ivec_unit_vec() {
     Vec3 expected = Vec3(0.58420624f,-0.70104749f,0.40894437f);
     Vec3 actual = unit(v);
 
-    bool mismatch = false;
-    for (size_t i = 0; i < 3; i++) {
-        mismatch = !(std::abs(expected[i] - actual[i]) <= 1e-3f);
-    }
-
-    if (!mismatch) {
-        actual = expected;
-    }
-
     return {
         expected,
-        actual
+        equal_eps(expected, actual) ? expected : actual
     };
 }
 
@@ -239,7 +230,7 @@ struct Ray { Vec3 origin; Vec3 direction; };
 
 TestResult ray_plane_intersection_point_test() {
     // ray origin & direction
-    Ray R = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
+    const Ray ray = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
 
     // triangle vertex coordinates
     const Vec3 A = Vec3(4,3,1);
@@ -247,24 +238,20 @@ TestResult ray_plane_intersection_point_test() {
     const Vec3 C = Vec3(1,1,1);
 
     const Vec3 N = unit(cross(A - B, C - B));
-    const float t = dot(N, B - R.origin) / dot(N, R.direction);
+    const float t = dot(N, B - ray.origin) / dot(N, ray.direction);
     const float expected_t = 4.5354f;
 
-    Vec3 actual = R.origin + R.direction * t;
+    Vec3 actual = ray.origin + ray.direction * t;
     const Vec3 expected = Vec3(2.2f,2.2f,0.7f);
-
-    if (std::abs(t - expected_t) <= 1e-3f) {
-        actual = expected;
-    }
 
     return {
         expected,
-        actual
+        equal_eps(actual, expected) ? expected : actual
     };
 }
 
 TestResult ray_sphere_intersection_test() {
-    const Ray R = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
+    const Ray ray = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
 
     // Circle Center & Radius
     const Vec3 center = Vec3(2.f + (1.0f/3.0f), 2.f + (1.0f/3.0f), 2.0f / 3.0f);
@@ -272,9 +259,9 @@ TestResult ray_sphere_intersection_test() {
     const float radius_squared = radius * radius;
 
     // Compute quadratic formula
-    const float a = dot(R.direction, R.direction);
-    const float b = 2.0f * dot(R.origin, R.direction) - 2.0f * dot(center, R.direction);
-    const float c = -2.0f * dot(center, R.origin) + dot(center, center) + dot(R.origin, R.origin) - radius_squared;
+    const float a = dot(ray.direction, ray.direction);
+    const float b = 2.0f * dot(ray.origin, ray.direction) - 2.0f * dot(center, ray.direction);
+    const float c = -2.0f * dot(center, ray.origin) + dot(center, center) + dot(ray.origin, ray.origin) - radius_squared;
 
     // Check if we have a real solution via discriminant
     const Vec3 expected = Vec3(1.79261938f,1.79261938f,1.31107093f);
@@ -289,19 +276,22 @@ TestResult ray_sphere_intersection_test() {
     // Real quadratic formula solutions
     const float t1 = (-b - std::sqrt(discriminant)) / (2.0f * a);
     const float t2 = (-b + std::sqrt(discriminant)) / (2.0f * a);
-    const float t = t1 >= 0 ? t1 : t2;
-
+    
+    // Occurs if our sphere is in the opposite direction of our ray being shot
+    if (t1 < 0 && t2 < 0) {
+        return {
+            expected,
+            Vec3(std::numeric_limits<float>::max())
+        };
+    }
+    
     // Get the intersection point
-    Vec3 actual = R.origin + R.direction * t;
-
-    // Is it close to our expected solution (by some error 1e-3f)
-    bool match = true;
-    for (int i = 0; i < 3; i++) { match = match & (std::abs(actual[i] - expected[i]) <= 1e-3f); }
-    actual = match ? expected : actual;
+    const float t = t1 >= 0 ? t1 : t2;
+    Vec3 actual = ray.origin + ray.direction * t;
 
     return {
         expected,
-        actual
+        equal_eps(expected, actual) ? expected : actual
     };
 }
 
@@ -310,6 +300,47 @@ TestResult map_pow_test() {
     return {
         Vec3(4,16,64),
         map(v, [](float v){ return v * v; })
+    };
+}
+
+TestResult fold_sum() {
+    Vec3 v(1, 2, 3);
+    return {
+        Vec3(6),
+        Vec3(fold(v, 0.f, [](float a, float b){ return a + b; }))
+    };
+}
+
+TestResult distance_test() {
+    Vec3 v(0);
+    Vec3 u(3,4,0);
+    return {
+        Vec3(5),
+        distance(v,u)
+    };
+}
+
+TestResult clamp_test() {
+    const Vec3 v(144, 100, 50);
+    const Vec3 w(10, 70, 11);
+    const Vec3 u(45,200,88);
+    return {
+        Vec3(199, 255, 149),
+        clamp(v + w + u, 0.f, 255.f)
+    };
+}
+
+TestResult lerp_test() {
+    const Vec3 a(-10,-12,0);
+    const Vec3 b(30, 4, 0);
+    const float t = 0.6f;
+
+    const Vec3 expected = Vec3(14.f,-2.4f, 0.f);
+    Vec3 actual = (1.0f - t) * a + t * b;
+
+    return {
+        expected,
+        equal_eps(expected, actual) ? expected : actual
     };
 }
 
@@ -338,10 +369,17 @@ int main() {
         { "Multiple Composition #1", compose_elementwise_add_magnitude },
         { "Ray-Plane Intersection #1", ray_plane_intersection_point_test },
         { "Ray-Sphere Interesection #1", ray_sphere_intersection_test },
-        { "Map Test #1"}
+        { "Map Test #1", map_pow_test },
+        { "Fold #1", fold_sum },
+        { "Distance Test #1", distance_test },
+        { "Clamp Test #1", clamp_test },
+        { "Lerp Test #1", lerp_test }
     };
+
+    size_t successes = 0;
+    size_t count = 0;
     
-    std::cout << "LALG TESTS\n========================" << std::endl;
+    std::cout << "========================\nLALG TESTS\n========================" << std::endl;
     for (TestItem& t : tests) {
         TestResult res = t.test_func();
         bool equal = res.actual == res.expected;
@@ -349,5 +387,11 @@ int main() {
             ": EXPECTED = " << printvec(res.expected) << 
             ", ACTUAL = " << printvec(res.actual) << 
             ", " << ((equal) ? "PASS!" : "FAIL...") << std::endl;
+        
+        successes += (size_t) equal;
+        count += 1;
     }
+    std::cout << "========================\n" << successes << "/" << count << " correct.\n========================" << std::endl;
+
+    return EXIT_SUCCESS;
 }
