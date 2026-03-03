@@ -88,13 +88,19 @@ namespace mbl {
         /** Returns the number of indices (or points) within the IsoSurface */
         size_t indices() const;
 
-        const lalg::vec3& get_origin() const {
+        const lalg::vec3& get_center() const {
             return this->m_center_position;
         }
         
         /** Returns the shape (indices per axis) of this IsoSurface 
          * as an IndexDim */
         IndexDim shape() const;
+
+        /** Given a position, maps said point to a floating-point index  */
+        lalg::vec3 position_to_index(const lalg::vec3& position) {
+            const mbl::lalg::ivec3 m = shape() / 2;
+            return (position - m_center_position) * (m.x  / m_side_length) + m;
+        }
 
         /** Returns the side length of this IsoSurface */
         float length() const;
