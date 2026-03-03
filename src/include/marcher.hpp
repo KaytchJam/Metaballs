@@ -11,6 +11,7 @@ namespace mbl {
             FieldRange field;
         public:
             MarchingCubeRange(IsoSurface& surface);
+            MarchingCubeRange(IsoSurface& surface, const FieldRange& subcube);
             ~MarchingCubeRange();
 
             /** Type returned by the MarchingCubeIterator. A 'view' of the underlying IsoSurface that
