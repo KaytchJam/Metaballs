@@ -48,7 +48,7 @@ namespace mbl {
 
             /** Simple representation of a Algebraic Vector over some type `T` with dimension `N`. */
             template <typename T, size_t N>
-            struct Vec {
+            struct vec {
                 T data[N];
 
                 using value_type = T;
@@ -57,10 +57,10 @@ namespace mbl {
                 constexpr T& operator[](size_t i)       { return data[i]; }
                 constexpr const T& operator[](size_t i) const { return data[i]; }
 
-                Vec() = default;
+                vec() = default;
 
-                template<typename Expr>
-                Vec(const Expr& e) {
+                template<VecLike Expr>
+                vec(const Expr& e) {
                     for (size_t i=0; i< N; i++) {
                         data[i] = e[i];
                     }
@@ -68,7 +68,7 @@ namespace mbl {
             };
 
             template <typename T>
-            struct Vec<T,3> {
+            struct vec<T,3> {
                 union {
                     T data[3];
                     struct { T x, y, z; };
@@ -80,15 +80,15 @@ namespace mbl {
                 constexpr T& operator[](size_t i)       { return data[i]; }
                 constexpr const T& operator[](size_t i) const { return data[i]; }
 
-                Vec() : x(),y(),z() {}
-                Vec(T a,T b,T c) : x(a),y(b),z(c) {}
-                Vec(const T& t) : x(t), y(t), z(t) {}
+                vec() : x(),y(),z() {}
+                vec(T a,T b,T c) : x(a),y(b),z(c) {}
+                vec(const T& t) : x(t), y(t), z(t) {}
 
                 template<VecLike Expr>
-                Vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]) {}
+                vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]) {}
 
                 template <VecLike Expr>
-                Vec& operator+=(const Expr& rhs) {
+                vec& operator+=(const Expr& rhs) {
                     static_assert(VecSize<Expr> == 3);
                     x += rhs[0];
                     y += rhs[1];
@@ -97,7 +97,7 @@ namespace mbl {
                 }
 
                 template <VecLike Expr>
-                Vec& operator-=(const Expr& rhs) {
+                vec& operator-=(const Expr& rhs) {
                     static_assert(VecSize<Expr> == 3);
                     x -= rhs[0];
                     y -= rhs[1];
@@ -105,14 +105,14 @@ namespace mbl {
                     return *this;
                 }
 
-                Vec& operator*=(const T scalar) {
+                vec& operator*=(const T scalar) {
                     x *= scalar;
                     y *= scalar;
                     z *= scalar;
                     return *this;
                 }
 
-                Vec& operator/=(const T scalar) {
+                vec& operator/=(const T scalar) {
                     x /= scalar;
                     y /= scalar;
                     z /= scalar;
@@ -121,7 +121,7 @@ namespace mbl {
             };
 
             template<typename T,size_t N>
-            struct VecTraits<Vec<T,N>> {
+            struct VecTraits<vec<T,N>> {
                 using value_type = T;
                 static constexpr size_t size = N;
             };
@@ -343,19 +343,19 @@ namespace mbl {
 
             /** Produce a new `VecLike` that is the project of `VecLike v` onto `VecLike onto`. */
             template <VecLike L, VecLike R>
-            Vec<VecValue<L>,VecSize<L>> project_onto(const L& v, const R& onto) {
+            vec<VecValue<L>,VecSize<L>> project_onto(const L& v, const R& onto) {
                 static_assert(std::is_same<VecValue<L>, VecValue<R>>::value, "lalg::project_onto(Vec<L> lhs, Vec<R> rhs): lhs and rhs must be vectors of the same underlying type.");
-                Vec<float,VecSize<L>> b_unit = unit(onto);
+                vec<float,VecSize<L>> b_unit = unit(onto);
                 return dot(v, b_unit) * b_unit;
             }
 
             /** Produce a new `VecLike` that is the cross product of `l` and `r`. */
             template <VecLike L, VecLike R>
-            Vec<OpResult<std::multiplies<>, VecValue<L>, VecValue<R>>,3> cross(const L& v, const R& w) {
+            vec<OpResult<std::multiplies<>, VecValue<L>, VecValue<R>>,3> cross(const L& v, const R& w) {
                 using T = OpResult<std::multiplies<>, VecValue<L>, VecValue<R>>;
-                Vec<T,3> i(1.0, 0.0, 0.0);
-                Vec<T,3> j(0.0, 1.0, 0.0);
-                Vec<T,3> k(0.0, 0.0, 1.0);
+                vec<T,3> i(1.0, 0.0, 0.0);
+                vec<T,3> j(0.0, 1.0, 0.0);
+                vec<T,3> k(0.0, 0.0, 1.0);
 
                 return ((v[1] * w[2] - v[2] * w[1]) * i) 
                 - ((v[0] * w[2] - v[2] * w[0]) * j)
@@ -439,9 +439,9 @@ namespace mbl {
                 return true;
             }
 
-            using Vec3 = Vec<float,3>;
-            using IVec3 = Vec<int32_t,3>;
-            using DVec3 = Vec<double,3>;
+            using vec3 = vec<float,3>;
+            using ivec3 = vec<int32_t,3>;
+            using dvec3 = vec<double,3>;
         }
     }
 }
