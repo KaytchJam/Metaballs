@@ -65,6 +65,15 @@ namespace mbl {
                         data[i] = e[i];
                     }
                 }
+
+                template <typename Expr>
+                static vec<T,N> from(const Expr& other) {
+                    vec<T,N> out;
+                    for (size_t i=0;i<N;i++) {
+                        out[i] = other[i];
+                    }
+                    return out;
+                }
             };
 
             template <typename T>
@@ -80,15 +89,15 @@ namespace mbl {
                 constexpr T& operator[](size_t i)       { return data[i]; }
                 constexpr const T& operator[](size_t i) const { return data[i]; }
 
-                vec() : x(),y(),z() {}
-                vec(T a,T b,T c) : x(a),y(b),z(c) {}
-                vec(const T& t) : x(t), y(t), z(t) {}
+                constexpr vec() : x(),y(),z() {}
+                constexpr vec(T a,T b,T c) : x(a),y(b),z(c) {}
+                constexpr vec(const T& t) : x(t), y(t), z(t) {}
 
                 template<VecLike Expr>
-                vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]) {}
+                constexpr vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]) {}
 
                 template <VecLike Expr>
-                vec& operator+=(const Expr& rhs) {
+                constexpr vec& operator+=(const Expr& rhs) {
                     static_assert(VecSize<Expr> == 3);
                     x += rhs[0];
                     y += rhs[1];
@@ -97,7 +106,7 @@ namespace mbl {
                 }
 
                 template <VecLike Expr>
-                vec& operator-=(const Expr& rhs) {
+                constexpr vec& operator-=(const Expr& rhs) {
                     static_assert(VecSize<Expr> == 3);
                     x -= rhs[0];
                     y -= rhs[1];
@@ -105,18 +114,27 @@ namespace mbl {
                     return *this;
                 }
 
-                vec& operator*=(const T scalar) {
+                constexpr vec& operator*=(const T scalar) {
                     x *= scalar;
                     y *= scalar;
                     z *= scalar;
                     return *this;
                 }
 
-                vec& operator/=(const T scalar) {
+                constexpr vec& operator/=(const T scalar) {
                     x /= scalar;
                     y /= scalar;
                     z /= scalar;
                     return *this;
+                }
+
+                template <typename Expr>
+                constexpr static vec<T,3> from(const Expr& other) {
+                    vec<T,3> out;
+                    for (int i=0;i<3;i++) {
+                        out[i] = other[i];
+                    }
+                    return out;
                 }
             };
 
@@ -444,4 +462,6 @@ namespace mbl {
             using dvec3 = vec<double,3>;
         }
     }
+
+    namespace lalg = common::lalg;
 }
