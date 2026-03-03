@@ -444,6 +444,20 @@ namespace mbl {
                 });
             }
 
+            template <VecLike V>
+            auto floor(const V& v) {
+                return map(v, [](VecValue<V> i) {
+                    return std::floor(i);
+                });
+            }
+
+            template <VecLike V>
+            auto ceil(const V& v) {
+                return map(v, [](VecValue<V> i) {
+                    return std::ceil(i);
+                });
+            }
+
             /** Check whether VecLike  */
             template <VecLike L, VecLike R> requires std::is_same_v<VecValue<L>,VecValue<R>> && std::is_floating_point_v<VecValue<L>>
             bool equal_eps(const L& l, const R& r, VecValue<L> eps = 1e-3f) {
