@@ -375,20 +375,20 @@ template <typename T> using Ptr = T*;
 #include <engine.hpp>
 
 int bouncing() {
-    const mbl::lalg::vec3 center = mbl::lalg::vec3(0.f);
+    const gtt::lalg::vec3 center = gtt::lalg::vec3(0.f);
     const float side_length = 10.f;
     const int32_t resolution = 30;
     const float iso_value = 1.f;
     const int32_t num_metaballs = 10;
 
-    mbl::MetaballEngine<mbl::Metaball<mbl::presets::KineticBlob>> engine(center, side_length, resolution, iso_value);
+    gtt::MetaballEngine<gtt::Metaball<gtt::presets::KineticBlob>> engine(center, side_length, resolution, iso_value);
     for (int i = 0; i < num_metaballs; i++) {
-        mbl::lalg::vec3 position = mbl::lalg::vec3::from(glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f)));
-        mbl::lalg::vec3 velocity = mbl::lalg::vec3::from(glm::sphericalRand(1.f));
-        engine.add_metaball(mbl::Metaball(mbl::presets::KineticBlob(position, velocity)));
+        gtt::lalg::vec3 position = gtt::lalg::vec3::from(glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f)));
+        gtt::lalg::vec3 velocity = gtt::lalg::vec3::from(glm::sphericalRand(1.f));
+        engine.add_metaball(gtt::Metaball(gtt::presets::KineticBlob(position, velocity)));
     }
 
-    mbl::common::graphics::MeshData md = engine.construct_mesh();
+    gtt::common::graphics::MeshData md = engine.construct_mesh();
 
     const int SCREEN_WIDTH = 640;
     const int SCREEN_HEIGHT = 480;
@@ -474,8 +474,8 @@ int bouncing() {
         glm::mat4 mvp = proj * view;
 
         for (int i = 0; i < num_metaballs; i++) {
-            mbl::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
-            mbl::lalg::vec3& kb_pos = kb.update(deltaTime);
+            gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+            gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
 
             for (int i = 0; i < 3; i++) {
                 if (kb_pos[i] < -5.f + 1.0f) {
