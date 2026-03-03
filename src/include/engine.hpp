@@ -11,7 +11,7 @@
 #include <array>
 
 namespace mbl {
-    typedef std::array<glm::vec3,12> LerpedEdgePoints; // Interpolated Edge Points
+    typedef std::array<lalg::vec3,12> LerpedEdgePoints; // Interpolated Edge Points
     typedef std::array<IsoPoint*,8> CubeOrderedIsopoints; // Isopoints reordered to match `edge_mappings`
     typedef std::array<common::graphics::Vertex, 16> OutVertices; // Cube vertices to be copied out
     typedef std::array<int32_t, 16> OutIndices; // Cube indices to be copied out
@@ -49,7 +49,7 @@ namespace mbl {
         public:
             /** Create a Metaball engine that constructs a `SCALAR FIELD` centered on `center` with a side length of `side_length`,
              * a resolution (# of divisions per axis in the scalar field), and an isovalue to test passed in metaballs against. */
-            MetaballEngine(const glm::vec3& center, const float side_length, const int32_t resolution, const float isovalue = 1.0f);
+            MetaballEngine(const lalg::vec3& center, const float side_length, const int32_t resolution, const float isovalue = 1.0f);
 
             ~MetaballEngine() {}
 
@@ -83,14 +83,14 @@ namespace mbl {
             float sum_metaballs(const float x, const float y, const float z) const;
 
             /** Returns the sum of all metaballs in the metaball engine
-             * given a glm::vec3 position */
-            float sum_metaballs(const glm::vec3& position) const;
+             * given a lalg::vec3 position */
+            float sum_metaballs(const lalg::vec3& position) const;
 
             /** Compute gradient. */
-            glm::vec3 compute_gradient(const glm::vec3& p, const float eps = 1e-3f) const;
+            lalg::vec3 compute_gradient(const lalg::vec3& p, const float eps = 1e-3f) const;
 
             /** Compute normal. */
-            glm::vec3 compute_normal(const glm::vec3& p, const float eps = 1e-3f) const;
+            lalg::vec3 compute_normal(const lalg::vec3& p, const float eps = 1e-3f) const;
 
             /** Computes and sets the density values for all IsoPoints in the field
              * this MetaballEngine spans over. */
@@ -123,7 +123,7 @@ namespace mbl {
     };
 
     template <typename M>
-    MetaballEngine<M>::MetaballEngine(const glm::vec3& center, const float side_length, const int32_t resolution, const float iso_value)
+    MetaballEngine<M>::MetaballEngine(const lalg::vec3& center, const float side_length, const int32_t resolution, const float iso_value)
         : field(IsoSurface::construct(center, side_length / 2.f, resolution)), 
           balls(), 
           isovalue(iso_value),
@@ -139,22 +139,22 @@ namespace mbl {
     }
 
     template <typename M>
-    float MetaballEngine<M>::sum_metaballs(const glm::vec3& position) const {
+    float MetaballEngine<M>::sum_metaballs(const lalg::vec3& position) const {
         return sum_metaballs(position.x, position.y, position.z);
     }
 
     template <typename M>
-    glm::vec3 MetaballEngine<M>::compute_gradient(const glm::vec3& p, const float eps) const {
-        const glm::vec3 dx = glm::vec3(eps, 0, 0);
-        const glm::vec3 dy = glm::vec3(0, eps, 0);
-        const glm::vec3 dz = glm::vec3(0, 0, eps);
+    lalg::vec3 MetaballEngine<M>::compute_gradient(const lalg::vec3& p, const float eps) const {
+        const lalg::vec3 dx = lalg::vec3(eps, 0, 0);
+        const lalg::vec3 dy = lalg::vec3(0, eps, 0);
+        const lalg::vec3 dz = lalg::vec3(0, 0, eps);
 
-        const glm::vec3 pdx = p + dx;
-        const glm::vec3 mdx = p - dx;
-        const glm::vec3 pdy = p + dy;
-        const glm::vec3 mdy = p - dy;
-        const glm::vec3 pdz = p + dz;
-        const glm::vec3 mdz = p - dx;
+        const lalg::vec3 pdx = p + dx;
+        const lalg::vec3 mdx = p - dx;
+        const lalg::vec3 pdy = p + dy;
+        const lalg::vec3 mdy = p - dy;
+        const lalg::vec3 pdz = p + dz;
+        const lalg::vec3 mdz = p - dx;
 
         std::array<float, 6> neighbors = {};
         for (const M& m : balls) {
@@ -166,7 +166,7 @@ namespace mbl {
             neighbors[5] += m.compute(mdz);
         }
 
-        return glm::vec3(
+        return lalg::vec3(
             neighbors[0] - neighbors[1],
             neighbors[2] - neighbors[3],
             neighbors[4] - neighbors[5]
@@ -174,8 +174,8 @@ namespace mbl {
     }
 
     template <typename M>
-    glm::vec3 MetaballEngine<M>::compute_normal(const glm::vec3& p, float eps) const {
-        return -glm::normalize(compute_gradient(p));
+    lalg::vec3 MetaballEngine<M>::compute_normal(const lalg::vec3& p, float eps) const {
+        return -1 * lalg::unit(compute_gradient(p));
     }
 
     template <typename M>

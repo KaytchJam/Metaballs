@@ -1,12 +1,11 @@
 #pragma once
 
-#include "../dependencies/glm/glm.hpp"
-
 #include <intrange.hpp>
 #include <array>
 #include <iterator>
+#include <common/lalg.hpp>
 
-typedef glm::ivec3 IndexDim;
+typedef mbl::common::lalg::ivec3 IndexDim;
 
 /** Represents a range across different indices. */
 struct FieldRange {

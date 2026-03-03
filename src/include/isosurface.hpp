@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../dependencies/glm/glm.hpp"
-
 #include <fieldrange.hpp>
 #include <vector>
 #include <iostream>
@@ -9,20 +7,20 @@
 namespace mbl {
     /** Represents a cube corner point in an IsoSurface. */
     struct IsoPointProxy {
-        glm::vec3& position;
+        lalg::vec3& position;
         float& density;
     };
 
     /** Representation of a cube corner point in an IsoSurface */
     struct IsoPoint {
-        glm::vec3 position = glm::vec3(0.f);
+        lalg::vec3 position = lalg::vec3(0.f);
         float density = 0.f;
 
         IsoPoint() {}
-        IsoPoint(const glm::vec3& pos, const float dens) : position(pos), density(dens) {}
+        IsoPoint(const lalg::vec3& pos, const float dens) : position(pos), density(dens) {}
     };
 
-    typedef glm::ivec3 IndexDim;
+    typedef lalg::ivec3 IndexDim;
 
     /** Struct for mapping between linear indices & 3d indices
      * indices. Takes in an `IndexDim` "dim" as a context. */
@@ -46,10 +44,10 @@ namespace mbl {
     private:
         float m_side_length;
         uint32_t m_partitions;
-        glm::vec3 m_center_position;
+        lalg::vec3 m_center_position;
         std::vector<IsoPoint> m_isopoints;
 
-        IsoSurface(const glm::vec3& center, float length, uint32_t partitions);
+        IsoSurface(const lalg::vec3& center, float length, uint32_t partitions);
     public:
         ~IsoSurface() = default;
 
@@ -63,8 +61,8 @@ namespace mbl {
         IsoPoint& get(uint32_t i, uint32_t j, uint32_t k);
         const IsoPoint& get(uint32_t i, uint32_t j, uint32_t k) const;
         
-        glm::vec3& get_position(uint32_t i);
-        const glm::vec3& get_position(uint32_t i) const;
+        lalg::vec3& get_position(uint32_t i);
+        const lalg::vec3& get_position(uint32_t i) const;
 
         float& get_density(uint32_t i);
         const float& get_density(uint32_t i) const;
@@ -75,7 +73,7 @@ namespace mbl {
          * 
          * If partitions is odd, `new_partitions = partitions - 1` */
         static IsoSurface construct(
-            const glm::vec3& center,
+            const lalg::vec3& center,
             const float side_length,
             uint32_t partitions
         );
@@ -90,7 +88,7 @@ namespace mbl {
         /** Returns the number of indices (or points) within the IsoSurface */
         size_t indices() const;
 
-        const glm::vec3& get_origin() const {
+        const lalg::vec3& get_origin() const {
             return this->m_center_position;
         }
         

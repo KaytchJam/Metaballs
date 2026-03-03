@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../dependencies/glm/glm.hpp"
-
 #include <functional>
 #include <metaball_traits.hpp>
 #include <typeinfo>
@@ -13,7 +11,7 @@ namespace mbl {
         DynamicMetaball() {}
         ~DynamicMetaball() {}
         virtual float operator()(float x, float y, float z) const = 0;
-        virtual float compute(const glm::vec3& v) const {
+        virtual float compute(const lalg::vec3& v) const {
             return (*this)(v.x, v.y, v.z);
         }
     };
@@ -26,7 +24,7 @@ namespace mbl {
             return static_cast<const Derived&>(*this)(x, y, z);
         }
     
-        float compute(const glm::vec3& v) const {
+        float compute(const lalg::vec3& v) const {
             return (*this)(v.x, v.y, v.z);
         }
     };
