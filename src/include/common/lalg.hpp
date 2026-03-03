@@ -60,14 +60,14 @@ namespace mbl {
                 vec() = default;
 
                 template<VecLike Expr>
-                vec(const Expr& e) {
+                constexpr vec(const Expr& e) {
                     for (size_t i=0; i< N; i++) {
                         data[i] = e[i];
                     }
                 }
 
                 template <typename Expr>
-                static vec<T,N> from(const Expr& other) {
+                constexpr static vec<T,N> from(const Expr& other) {
                     vec<T,N> out;
                     for (size_t i=0;i<N;i++) {
                         out[i] = other[i];
