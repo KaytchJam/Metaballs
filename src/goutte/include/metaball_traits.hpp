@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <boundingbox.hpp>
 
-namespace mbl {
+namespace gtt {
     /** 
      * Requirements for being a ScalarFunction
      * (1) have the following operator overload: 

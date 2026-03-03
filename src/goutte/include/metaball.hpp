@@ -4,7 +4,7 @@
 #include <metaball_traits.hpp>
 #include <typeinfo>
 
-namespace mbl {
+namespace gtt {
     /** A run-time interface for Metaballs */ 
     class DynamicMetaball {
     public:
@@ -113,7 +113,7 @@ namespace mbl {
     public:
         template <typename T>
         explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {
-            static_assert(mbl::IsScalarFunction<T>::value, "mbl::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
+            static_assert(gtt::IsScalarFunction<T>::value, "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
         }
     
         template <typename Derived>

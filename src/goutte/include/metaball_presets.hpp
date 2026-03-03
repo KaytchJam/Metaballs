@@ -2,7 +2,7 @@
 
 #include <metaball.hpp>
 
-namespace mbl {
+namespace gtt {
     /** Pre-defined metaball structs can be found here. */
     namespace presets {
         struct InverseSquareBlob {

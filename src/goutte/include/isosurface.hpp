@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 
-namespace mbl {
+namespace gtt {
     /** Represents a cube corner point in an IsoSurface. */
     struct IsoPointProxy {
         lalg::vec3& position;
@@ -98,7 +98,7 @@ namespace mbl {
 
         /** Given a position, maps said point to a floating-point index  */
         lalg::vec3 position_to_index(const lalg::vec3& position) {
-            const mbl::lalg::ivec3 m = shape() / 2;
+            const gtt::lalg::ivec3 m = shape() / 2;
             return (position - m_center_position) * (m.x  / m_side_length) + m;
         }
 

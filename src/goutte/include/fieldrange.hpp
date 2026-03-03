@@ -5,7 +5,7 @@
 #include <iterator>
 #include <common/lalg.hpp>
 
-typedef mbl::common::lalg::ivec3 IndexDim;
+typedef gtt::common::lalg::ivec3 IndexDim;
 
 /** Represents a range across different indices. */
 struct FieldRange {

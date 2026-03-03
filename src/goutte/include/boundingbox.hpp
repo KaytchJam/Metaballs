@@ -4,8 +4,8 @@
 
 /** Simple representation of a 3D Bounding Box with a maximal point & a minimal point */
 struct BoundingBox {
-    mbl::common::lalg::vec3 max_point;
-    mbl::common::lalg::vec3 min_point;
+    gtt::common::lalg::vec3 max_point;
+    gtt::common::lalg::vec3 min_point;
 
     BoundingBox& intersection_mut(const BoundingBox& outer) {
         this->min_point = max(min_point, outer.min_point);

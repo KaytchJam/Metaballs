@@ -3,7 +3,7 @@
 #include <fieldrange.hpp>
 #include <isosurface.hpp>
 
-namespace mbl {
+namespace gtt {
     class MarchingCubeRange {
         private:
             IsoPoint* m_data;

@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iostream>
 
-using namespace mbl::common::lalg;
+using namespace gtt::common::lalg;
 
 template <typename T, size_t N>
 std::string printvec(const vec<T,N>& v) {

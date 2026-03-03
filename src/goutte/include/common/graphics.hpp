@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace mbl {
+namespace gtt {
     namespace common {
         namespace graphics {
             /** Simple vertex data type that stores a position and a normal */

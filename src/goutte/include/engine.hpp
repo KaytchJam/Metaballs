@@ -10,7 +10,7 @@
 #include <vector>
 #include <array>
 
-namespace mbl {
+namespace gtt {
     typedef std::array<lalg::vec3,12> LerpedEdgePoints; // Interpolated Edge Points
     typedef std::array<IsoPoint*,8> CubeOrderedIsopoints; // Isopoints reordered to match `edge_mappings`
     typedef std::array<common::graphics::Vertex, 16> OutVertices; // Cube vertices to be copied out
@@ -115,7 +115,7 @@ namespace mbl {
 
     // MetaballEngine implementations
     
-    #include "../MarchingCubes.hpp"
+    #include <marching_cubes_consts.hpp>
 
     static constexpr IndexDim cube_index_offsets[8] = {
         {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},

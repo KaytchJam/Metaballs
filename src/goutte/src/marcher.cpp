@@ -1,6 +1,6 @@
 #include <marcher.hpp>
 
-using namespace mbl;
+using namespace gtt;
 using CubeView = MarchingCubeRange::CubeView;
 using CubeViewIterator = CubeView::CubeViewIterator;
 using MarchingCubeIterator = MarchingCubeRange::MarchingCubeIterator;

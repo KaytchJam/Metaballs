@@ -1,7 +1,7 @@
 
 #include <isosurface.hpp>
 
-using namespace mbl;
+using namespace gtt;
 
 // INDEX COMPACTOR FUNCTIONS
 
