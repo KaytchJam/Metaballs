@@ -1,7 +1,7 @@
 
 #include <isosurface.hpp>
 
-using namespace mbl;
+using namespace gtt;
 
 // INDEX COMPACTOR FUNCTIONS
 
@@ -47,13 +47,13 @@ uint32_t cube_int(const uint32_t base) {
     return base * base * base;
 }
 
-IsoSurface::IsoSurface(const glm::vec3& center, const float side_length, const uint32_t partitions) 
+IsoSurface::IsoSurface(const lalg::vec3& center, const float side_length, const uint32_t partitions) 
     : m_center_position(center), m_side_length(side_length), m_partitions(partitions) {
     const uint32_t size_cubed = cube_int(partitions + 1);
     m_isopoints.reserve(size_cubed);
 }
 
-IsoSurface IsoSurface::construct(const glm::vec3& center, const float side_length, uint32_t partitions) {
+IsoSurface IsoSurface::construct(const lalg::vec3& center, const float side_length, uint32_t partitions) {
     assert(partitions > 1);
     
     partitions -= (partitions & 0x1) == 1; // makes partition even if odd
@@ -62,11 +62,11 @@ IsoSurface IsoSurface::construct(const glm::vec3& center, const float side_lengt
 
     IsoSurface surface = IsoSurface(center, side_length, partitions);
 
-    glm::vec3 offset;
-    glm::vec3 ratios;
+    lalg::vec3 offset;
+    lalg::vec3 ratios;
     const float half_indices = (float) mid_idx.x;
     for (const IndexDim& p_idx : FieldRange(0, axis_indices)) {
-        offset = glm::vec3(p_idx - mid_idx);
+        offset = lalg::vec3(p_idx - mid_idx);
         ratios = offset / half_indices;
         surface.m_isopoints.emplace_back( center + ratios * side_length, 0.0f);
     }
@@ -116,11 +116,11 @@ const IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) const {
     return get(index);
 }
 
-glm::vec3& IsoSurface::get_position(uint32_t i) {
+lalg::vec3& IsoSurface::get_position(uint32_t i) {
     return get(i).position;
 }
 
-const glm::vec3& IsoSurface::get_position(uint32_t i) const {
+const lalg::vec3& IsoSurface::get_position(uint32_t i) const {
     return get(i).position;
 }
 

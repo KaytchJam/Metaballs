@@ -1,11 +1,12 @@
 #include <marcher.hpp>
 
-using namespace mbl;
+using namespace gtt;
 using CubeView = MarchingCubeRange::CubeView;
 using CubeViewIterator = CubeView::CubeViewIterator;
 using MarchingCubeIterator = MarchingCubeRange::MarchingCubeIterator;
 
 MarchingCubeRange::MarchingCubeRange(IsoSurface& surface) : m_data(surface.data()), reshaper(surface.shape()[0]), field(0, surface.shape()[0] - 1) {}
+MarchingCubeRange::MarchingCubeRange(IsoSurface& surface, const FieldRange& subcube) : m_data(surface.data()), reshaper(surface.shape()[0]), field(subcube) {}
 
 MarchingCubeRange::~MarchingCubeRange() {}
 

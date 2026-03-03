@@ -4,10 +4,10 @@
 #include <sstream>
 #include <iostream>
 
-using namespace mbl::common::lalg;
+using namespace gtt::common::lalg;
 
 template <typename T, size_t N>
-std::string printvec(const Vec<T,N>& v) {
+std::string printvec(const vec<T,N>& v) {
     std::stringstream ss;
     ss << "[";
     if (N > 0) { ss << v[0]; }
@@ -16,13 +16,13 @@ std::string printvec(const Vec<T,N>& v) {
     return ss.str();
 }
 
-struct TestResult { Vec3 expected; Vec3 actual; };
+struct TestResult { vec3 expected; vec3 actual; };
 typedef TestResult (*TestFunction)();
 struct TestItem { const char* test_name; TestFunction test_func; };
 
 TestResult add_test() {
-    Vec3 a(1.0f);
-    Vec3 b(2.0, 3.0, 5.0);
+    vec3 a(1.0f);
+    vec3 b(2.0, 3.0, 5.0);
     return {
         { 3.0, 4.0, 6.0 },
         a + b
@@ -30,69 +30,69 @@ TestResult add_test() {
 }
 
 TestResult sub_test() {
-    Vec3 v(1);
-    Vec3 u(1.0f);
+    vec3 v(1);
+    vec3 u(1.0f);
     return  {
-        Vec3(0.f),
+        vec3(0.f),
         v - u
     };
 }
 
 TestResult mul_test() {
-    Vec3 v(2, 3, 4);
+    vec3 v(2, 3, 4);
     float s = 2;
     return {
-        Vec3(4, 6, 8),
+        vec3(4, 6, 8),
         v * s
     };
 }
 
 TestResult div_test() {
-    Vec3 v(10);
+    vec3 v(10);
     for (int i = 0; i < 2; i++) { v = v / 2; }
     return {
-        Vec3(2.5),
+        vec3(2.5),
         v
     };
 }
 
 TestResult add_in_place_test() {
-    Vec3 v(5);
-    v += Vec3(100);
+    vec3 v(5);
+    v += vec3(100);
     return {
-        Vec3(105),
+        vec3(105),
         v
     };
 }
 
 TestResult sub_in_place_test() {
-    Vec3 v(105);
-    v -= Vec3(100);
+    vec3 v(105);
+    v -= vec3(100);
     return {
-        Vec3(5),
+        vec3(5),
         v
     };
 }
 
 TestResult mul_in_place_test() {
-    Vec3 v(50);
+    vec3 v(50);
     return {
-        Vec3(100),
+        vec3(100),
         v * 2
     };
 }
 
 TestResult div_in_place_test() {
-    Vec3 v(100);
+    vec3 v(100);
     return {
-        Vec3(50),
+        vec3(50),
         v / 2
     };
 }
 
 TestResult ptr_test() {
-    Vec3 v(10, 25, 13);
-    Vec3 u(0);
+    vec3 v(10, 25, 13);
+    vec3 u(0);
     float* ptr = &v[0];
     u[0] = *ptr;
     u[1] = *(ptr + 1);
@@ -104,17 +104,17 @@ TestResult ptr_test() {
 }
 
 TestResult unit_vec_test() {
-    Vec3 v(8,0,0);
+    vec3 v(8,0,0);
     return {
-        Vec3(1,0,0),
+        vec3(1,0,0),
         unit(v)
     };
 }
 
 TestResult ivec_unit_vec() {
-    IVec3 v(10, -12, 7);
-    Vec3 expected = Vec3(0.58420624f,-0.70104749f,0.40894437f);
-    Vec3 actual = unit(v);
+    ivec3 v(10, -12, 7);
+    vec3 expected = vec3(0.58420624f,-0.70104749f,0.40894437f);
+    vec3 actual = unit(v);
 
     return {
         expected,
@@ -123,45 +123,45 @@ TestResult ivec_unit_vec() {
 }
 
 TestResult dot_product_test() {
-    Vec3 v(0,1,0);
-    Vec3 u(1,0,0);
+    vec3 v(0,1,0);
+    vec3 u(1,0,0);
     return {
-        Vec3(0),
-        Vec3(dot(v,u))
+        vec3(0),
+        vec3(dot(v,u))
     };
 }
 
 TestResult dot_product_two() {
-    Vec3 v(11, 2, 8);
-    Vec3 u(2, 5, 1);
+    vec3 v(11, 2, 8);
+    vec3 u(2, 5, 1);
     return {
-        Vec3(40),
-        Vec3(dot(v,u))
+        vec3(40),
+        vec3(dot(v,u))
     };
 }
 
 TestResult project_test() {
-    Vec3 v(4,5,0);
-    Vec3 u(0,1,0);    
+    vec3 v(4,5,0);
+    vec3 u(0,1,0);    
 
     return {
-        Vec3(0,5,0),
+        vec3(0,5,0),
         project_onto(v,u)
     };
 }
 
 TestResult cross_prod_test() {
-    Vec3 v(1,0,0);
-    Vec3 u(0,1,0);
+    vec3 v(1,0,0);
+    vec3 u(0,1,0);
     return {
-        Vec3(0,0,1),
+        vec3(0,0,1),
         cross(v,u)
     };
 }
 
 TestResult cosine_test() {
-    Vec3 v(2,4,3);
-    Vec3 u(1,8,5);
+    vec3 v(2,4,3);
+    vec3 u(1,8,5);
 
     float expected = 0.959126f;
     float actual = cosine_of(v,u);
@@ -171,78 +171,78 @@ TestResult cosine_test() {
     }
 
     return {
-        Vec3(expected),
-        Vec3(actual)
+        vec3(expected),
+        vec3(actual)
     };
 }
 
 TestResult vec_to_ivec_test() {
-    Vec3 v(10.5f, 0.0f, 2.9f);
-    Vec3 u(0.6f, 0.9f, 2.05f);
-    IVec3 q = v + u;
+    vec3 v(10.5f, 0.0f, 2.9f);
+    vec3 u(0.6f, 0.9f, 2.05f);
+    ivec3 q = v + u;
     return {
-        Vec3(11,0,4),
+        vec3(11,0,4),
         q
     };
 }
 
 TestResult binmax_map_test() {
-    Vec3 u(1,11,7);
-    Vec3 v(2,3,5);
-    Vec3 q = max(u,v);
+    vec3 u(1,11,7);
+    vec3 v(2,3,5);
+    vec3 q = max(u,v);
     return {
-        Vec3(2,11,7),
+        vec3(2,11,7),
         q
     };
 }
 
 TestResult binmin_map_test() {
-    Vec3 v(-11, 5, 42);
-    IVec3 u(10, -8, 50);
+    vec3 v(-11, 5, 42);
+    ivec3 u(10, -8, 50);
     return {
-        Vec3(-11,-8,42),
-        min(v,Vec3(u))
+        vec3(-11,-8,42),
+        min(v,vec3(u))
     };
 }
 
 TestResult elemwise_mul_test() {
-    Vec3 v1(10, 11, 2);
-    Vec3 v2(0, 2, 5);
+    vec3 v1(10, 11, 2);
+    vec3 v2(0, 2, 5);
 
     return {
-        Vec3(0, 22, 10),
+        vec3(0, 22, 10),
         elementwise(v1, v2)
     };
 }
 
 TestResult compose_elementwise_add_magnitude() {
-    Vec3 v(10, 5, 2);
-    Vec3 u(2);
-    Vec3 q(-5, -20, 6);
+    vec3 v(10, 5, 2);
+    vec3 u(2);
+    vec3 q(-5, -20, 6);
 
     return {
-        Vec3(15, -10, 10),
+        vec3(15, -10, 10),
         elementwise(v,u) + q
     };
 }
 
-struct Ray { Vec3 origin; Vec3 direction; };
+struct Ray { vec3 origin; vec3 direction; };
 
 TestResult ray_plane_intersection_point_test() {
     // ray origin & direction
-    const Ray ray = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
+    const Ray ray = { vec3(0,0,4), unit(vec3(2,2,-3)) };
 
     // triangle vertex coordinates
-    const Vec3 A = Vec3(4,3,1);
-    const Vec3 B = Vec3(2,3,0);
-    const Vec3 C = Vec3(1,1,1);
+    const vec3 A = vec3(4,3,1);
+    const vec3 B = vec3(2,3,0);
+    const vec3 C = vec3(1,1,1);
 
-    const Vec3 N = unit(cross(A - B, C - B));
+    const vec3 N = unit(cross(A - B, C - B));
     const float t = dot(N, B - ray.origin) / dot(N, ray.direction);
     const float expected_t = 4.5354f;
 
-    Vec3 actual = ray.origin + ray.direction * t;
-    const Vec3 expected = Vec3(2.2f,2.2f,0.7f);
+    vec3 actual = ray.origin + ray.direction * t;
+    const vec3 expected = vec3(2.2f,2.2f,0.7f);
 
     return {
         expected,
@@ -251,10 +251,10 @@ TestResult ray_plane_intersection_point_test() {
 }
 
 TestResult ray_sphere_intersection_test() {
-    const Ray ray = { Vec3(0,0,4), unit(Vec3(2,2,-3)) };
+    const Ray ray = { vec3(0,0,4), unit(vec3(2,2,-3)) };
 
     // Circle Center & Radius
-    const Vec3 center = Vec3(2.f + (1.0f/3.0f), 2.f + (1.0f/3.0f), 2.0f / 3.0f);
+    const vec3 center = vec3(2.f + (1.0f/3.0f), 2.f + (1.0f/3.0f), 2.0f / 3.0f);
     const float radius = 1.f;
     const float radius_squared = radius * radius;
 
@@ -264,12 +264,12 @@ TestResult ray_sphere_intersection_test() {
     const float c = -2.0f * dot(center, ray.origin) + dot(center, center) + dot(ray.origin, ray.origin) - radius_squared;
 
     // Check if we have a real solution via discriminant
-    const Vec3 expected = Vec3(1.79261938f,1.79261938f,1.31107093f);
+    const vec3 expected = vec3(1.79261938f,1.79261938f,1.31107093f);
     const float discriminant = b*b - 4.0f*a*c;
     if (discriminant < 0) {
         return {
             expected,
-            Vec3(std::numeric_limits<float>::max())
+            vec3(std::numeric_limits<float>::max())
         };
     }
 
@@ -281,13 +281,13 @@ TestResult ray_sphere_intersection_test() {
     if (t1 < 0 && t2 < 0) {
         return {
             expected,
-            Vec3(std::numeric_limits<float>::max())
+            vec3(std::numeric_limits<float>::max())
         };
     }
     
     // Get the intersection point
     const float t = t1 >= 0 ? t1 : t2;
-    Vec3 actual = ray.origin + ray.direction * t;
+    vec3 actual = ray.origin + ray.direction * t;
 
     return {
         expected,
@@ -296,47 +296,47 @@ TestResult ray_sphere_intersection_test() {
 }
 
 TestResult map_pow_test() {
-    Vec3 v(2, 4, 8);
+    vec3 v(2, 4, 8);
     return {
-        Vec3(4,16,64),
+        vec3(4,16,64),
         map(v, [](float v){ return v * v; })
     };
 }
 
 TestResult fold_sum() {
-    Vec3 v(1, 2, 3);
+    vec3 v(1, 2, 3);
     return {
-        Vec3(6),
-        Vec3(fold(v, 0.f, [](float a, float b){ return a + b; }))
+        vec3(6),
+        vec3(fold(v, 0.f, [](float a, float b){ return a + b; }))
     };
 }
 
 TestResult distance_test() {
-    Vec3 v(0);
-    Vec3 u(3,4,0);
+    vec3 v(0);
+    vec3 u(3,4,0);
     return {
-        Vec3(5),
+        vec3(5),
         distance(v,u)
     };
 }
 
 TestResult clamp_test() {
-    const Vec3 v(144, 100, 50);
-    const Vec3 w(10, 70, 11);
-    const Vec3 u(45,200,88);
+    const vec3 v(144, 100, 50);
+    const vec3 w(10, 70, 11);
+    const vec3 u(45,200,88);
     return {
-        Vec3(199, 255, 149),
+        vec3(199, 255, 149),
         clamp(v + w + u, 0.f, 255.f)
     };
 }
 
 TestResult lerp_test() {
-    const Vec3 a(-10,-12,0);
-    const Vec3 b(30, 4, 0);
+    const vec3 a(-10,-12,0);
+    const vec3 b(30, 4, 0);
     const float t = 0.6f;
 
-    const Vec3 expected = Vec3(14.f,-2.4f, 0.f);
-    Vec3 actual = (1.0f - t) * a + t * b;
+    const vec3 expected = vec3(14.f,-2.4f, 0.f);
+    vec3 actual = (1.0f - t) * a + t * b;
 
     return {
         expected,
@@ -354,7 +354,7 @@ int main() {
         { "Sub IP #1", sub_in_place_test },
         { "Mul IP #1", mul_in_place_test },
         { "Div IP #1", div_in_place_test },
-        { "Vec3 Contiguity #1", ptr_test },
+        { "vec3 Contiguity #1", ptr_test },
         { "Unit/1 Vec #1", unit_vec_test },
         { "DotProd #1", dot_product_test },
         { "Project Vec #1", project_test },

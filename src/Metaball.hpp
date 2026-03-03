@@ -7,7 +7,7 @@
 // #include <ratio>
 
 #include "utils/Vector3D.hpp"
-#include "MarchingCubes.hpp"
+#include <marching_cubes_consts.hpp>
 
 #include "dependencies/glm/glm.hpp"
 #include "dependencies/glfw-3.4/deps/glad/gl.h"

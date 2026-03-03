@@ -1,19 +1,17 @@
 #pragma once
 
-#include "../dependencies/glm/glm.hpp"
-
 #include <functional>
 #include <metaball_traits.hpp>
 #include <typeinfo>
 
-namespace mbl {
+namespace gtt {
     /** A run-time interface for Metaballs */ 
     class DynamicMetaball {
     public:
         DynamicMetaball() {}
         ~DynamicMetaball() {}
         virtual float operator()(float x, float y, float z) const = 0;
-        virtual float compute(const glm::vec3& v) const {
+        virtual float compute(const lalg::vec3& v) const {
             return (*this)(v.x, v.y, v.z);
         }
     };
@@ -26,7 +24,7 @@ namespace mbl {
             return static_cast<const Derived&>(*this)(x, y, z);
         }
     
-        float compute(const glm::vec3& v) const {
+        float compute(const lalg::vec3& v) const {
             return (*this)(v.x, v.y, v.z);
         }
     };
@@ -115,7 +113,7 @@ namespace mbl {
     public:
         template <typename T>
         explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {
-            static_assert(mbl::IsScalarFunction<T>::value, "mbl::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
+            static_assert(gtt::IsScalarFunction<T>::value, "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
         }
     
         template <typename Derived>
