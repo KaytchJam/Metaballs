@@ -84,6 +84,11 @@ namespace gtt {
                 m_center = m_center + m_velocity * dt;
                 return m_center;
             }
+
+            BoundingBox get_bounding_box() const {
+                const lalg::vec3 sqrt_of_scale_vec(sqrtf(m_scale));
+                return BoundingBox{ m_center + sqrt_of_scale_vec, m_center - sqrt_of_scale_vec };
+            }
         };
 
     }

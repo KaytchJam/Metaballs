@@ -45,7 +45,7 @@ For this project I implemented Marching Cubes along with various Metaballs. The 
 
 The Metaball Engine can be thought of as a cube-shaped "scalar field" centered on some point `p` in World Space. Each discrete point in this scalar-field has an associated density, which when tested against some isovalue (or threshold) determines if a Vertex can be created at said point.
 
-Furthermore, the Metaball Engine is templated over a type 'M' which represents a Metaball type. Any type that implements the interface `mbl::DynamicMetaball` can be accepted as a templated type for the Metaball Engine.
+Furthermore, the Metaball Engine is templated over a type 'M' which represents a Metaball type. Any type that implements the interface `gtt::DynamicMetaball` can be accepted as a templated type for the Metaball Engine.
 
 ```C++
 #include <engine.hpp>
@@ -59,37 +59,37 @@ float resolution = 10.0f;
 float isovalue = 1.0f;
 
 // Aggregate metaball is a metaball that can 'take in' any other metaball
-mbl::MetaballEngine<mbl::AggregateMetaball> M(position, side_length, resolution, isovalue);
+gtt::MetaballEngine<gtt::AggregateMetaball> M(position, side_length, resolution, isovalue);
 ```
 
 ###### Adding & Creating Metaballs
 
-As stated before, the Metaball Engine accepts any type that implements the mbl::DynamicMetaball interface. This can of course be achieved by creating a custom struct or class. We'll defined an "inclined plane" struct below that does exactly that.
+As stated before, the Metaball Engine accepts any type that implements the gtt::DynamicMetaball interface. This can of course be achieved by creating a custom struct or class. We'll defined an "inclined plane" struct below that does exactly that.
 
 ```C++
 // Very simple metaball that sums the x, y, and z input coordinates.
 // When thresholded for values >= isovalue = 1, an inclined plane is drawn
-struct InclinedPlane : public mbl::DynamicMetaball {
+struct InclinedPlane : public gtt::DynamicMetaball {
     float operator()(float x, float y, float z) const {
         return x + y + z;
     }
 };
 
 // only accepts Inclined Planes
-mbl::MetaballEngine<InclinedPlane> m1(...);
+gtt::MetaballEngine<InclinedPlane> m1(...);
 m.add_metaball(InclinedPlane());
 
 // accepts all types with operator()(float x, float y, float z) const -> float
-mbl::MetaballEngine<mbl::AggregateMetaball> m2(...);
+gtt::MetaballEngine<gtt::AggregateMetaball> m2(...);
 m.add_metaball(InclinedPlane());
 ```
 
 Another approach to creating a metaball is by wrapping some "callable type" that has a const "callable" operator that takes in 3 floats and returns a float. In other words, a function that takes a point in 3d space and returns a scalar value.
 
-The simplest way to do this is by passing in a `lambda (float x, float y, float z) -> float` as an argument for the constructor of `mbl::Metaball`. Below is our `InclinedPlane` in lambda form.
+The simplest way to do this is by passing in a `lambda (float x, float y, float z) -> float` as an argument for the constructor of `gtt::Metaball`. Below is our `InclinedPlane` in lambda form.
 
 ```C++
-mbl::Metaball m = mbl::Metaball([](float x, float y, float z) -> float { return x + y + z; })
+gtt::Metaball m = gtt::Metaball([](float x, float y, float z) -> float { return x + y + z; })
 ```
 
 A disadvantage of this approach is that you lose type info and end up with a fairly "uninteresting" Metaball. An approach that remedies this is by taking our `InclinedPlane` struct and passing it into the `Metaball` just like we did with the lambda. In this scenario it's not necessary for `InclinedPlane` to implement `DynamicMetaball` itself, as it is wrapped by the `Metaball` time which implements `DynamicMetaball`. However, `InclinedPlane` still needs to have the overload on `float operator()(float,float,float)`.
@@ -101,8 +101,8 @@ struct InclinedPlane {
     }
 };
 
-mbl::Metaball<InclinedPlane> ip = mbl::Metaball(InclinedPlane());
-mbl::MetaballEngine<Metaball<InclinedPlane>> me = mbl::MetaballEngine(...);
+gtt::Metaball<InclinedPlane> ip = gtt::Metaball(InclinedPlane());
+gtt::MetaballEngine<Metaball<InclinedPlane>> me = gtt::MetaballEngine(...);
 size_t index = me.add_metaball(ip);
 
 // You can directly unwrap the internal type w/ Metaball<T>, whereas
@@ -120,7 +120,7 @@ To process the metaballs and obtain the mesh to be used in rendering, simply cal
 // Making the engine
 MetaballEngine<T> me = MetaballEngine(...);
 me.add_metaball(...);
-mbl::common::graphics::MeshData md = me.construct_mesh();
+gtt::common::graphics::MeshData md = me.construct_mesh();
 
 // intermediate steps where you make the VAOs, Buffers, Shaders etc. go here
 // glGenVertexArrays(); glGenBuffers(); ...blah blah blah.
@@ -147,7 +147,7 @@ is set to true when...
 
 ###### Video Example
 
-You can see the engine in action in [this Youtube video](https://youtu.be/GkIUIajTTPo?si=OI2XB_iCBtpFot91). The metaballs are all blobs that travel linearly until they hit a wall, where they will bounce the opposite direction. The exact `Metaball` used is `KineticBlob` which can be found under `mbl::presets`.
+You can see the engine in action in [this Youtube video](https://youtu.be/GkIUIajTTPo?si=OI2XB_iCBtpFot91). The metaballs are all blobs that travel linearly until they hit a wall, where they will bounce the opposite direction. The exact `Metaball` used is `KineticBlob` which can be found under `gtt::presets`.
 
 ```C++
 struct KineticBlob {
@@ -172,11 +172,11 @@ struct KineticBlob {
     }
 };
 
-mbl::MetaballEngine<mbl::Metaball<KineticBlob>> engine(...);
+gtt::MetaballEngine<gtt::Metaball<KineticBlob>> engine(...);
 for (int i = 0; i < num_metaballs; i++) {
     glm::vec3 position = glm::linearRand(...);
     glm::vec3 velocity = glm::sphericalRand(...);
-    engine.add_metaball(mbl::Metaball(KineticBlob(position, velocity)));
+    engine.add_metaball(gtt::Metaball(KineticBlob(position, velocity)));
 }
 ```
 
@@ -185,13 +185,13 @@ Every frame `update` is called on all Metaballs in the engine. Since these chang
 ```C++
 // Update all KineticBlobs
 for (int i = 0; i < num_metaballs; i++) {
-    mbl::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+    gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
     glm::vec3& kb_pos = kb.update(deltaTime);
     // ... other checks on position for wall-bouncing
 }
 
 // Get the new mesh after the update
-mbl::common::graphics::MeshData md = engine.make_dirty().construct_mesh();
+gtt::common::graphics::MeshData md = engine.make_dirty().construct_mesh();
 ```
 
 #### References:
