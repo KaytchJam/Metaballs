@@ -1,5 +1,6 @@
 #include <common/lalg.hpp>
 #include <isosurface.hpp>
+#include <fieldrange.hpp>
 
 int main() {
     const gtt::lalg::vec3 center = gtt::lalg::vec3(0.f);
@@ -13,6 +14,10 @@ int main() {
 
     std::cout << "(" << q1.x << "," << q1.y << "," << q1.z << ") -> (" << p1.x << "," << p1.y << "," << p1.z << ")" << std::endl;
     std::cout << "(" << q2.x << "," << q2.y << "," << q2.z << ") -> (" << p2.x << "," << p2.y << "," << p2.z << ")" << std::endl;
+
+    for (IndexDim index3d : FieldRange({p1.x, p2.x, p1.y, p2.y, p1.z, p2.z})) {
+        std::cout << "(" << index3d.x << "," << index3d.y << "," << index3d.z << ")" << std::endl;
+    }
 
     return EXIT_SUCCESS;
 }
