@@ -471,6 +471,12 @@ namespace gtt {
                 return true;
             }
 
+            /** Alternative way to get a concrete vec<T,N> again after a series of operations */
+            template <VecLike V>
+            vec<VecValue<V>, VecSize<V>> evaluate(const V& v) {
+                return v;
+            }
+
             using vec3 = vec<float,3>;
             using ivec3 = vec<int32_t,3>;
             using dvec3 = vec<double,3>;
