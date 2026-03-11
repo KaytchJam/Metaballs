@@ -8,6 +8,7 @@ namespace gtt {
 
     struct AABBNode {
         BoundingBox bb;
+        void* data;
         int32_t parent;
     
         union {
@@ -19,10 +20,15 @@ namespace gtt {
         };
 
         static AABBNode empty() {
-            return AABBNode { BoundingBox(), -1, { -1, -1 } };
+            return AABBNode { BoundingBox(), nullptr, -1, { -1, -1 } };
         }
 
         bool is_leaf() const;
+
+        template <typename T>
+        inline T* data_as() {
+            return static_cast<T*>(data);
+        }
     };
 
     bool AABBNode::is_leaf() const {
@@ -33,18 +39,24 @@ namespace gtt {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
 
-        AABBNode& insert(const BoundingBox& bb);
-        AABBNode* get_root();
-        AABBNode* get_last();
+        AABBNode& insert(void* data, const BoundingBox& bb);
         void recalculate_upwards(int32_t from_idx);
+
+        inline AABBNode& left(AABBNode& n);
+        inline AABBNode& right(AABBNode& n);
+        inline AABBNode& parent(AABBNode& n);
     };
 
-    AABBNode* AABBTree::get_root() {
-        return &nodes[root];
+    inline AABBNode& AABBTree::left(AABBNode& n) {
+        return nodes[n.left];
     }
 
-    AABBNode* AABBTree::get_last() {
-        return &nodes[nodes.size() -1];
+    inline AABBNode& AABBTree::right(AABBNode& n) {
+        return nodes[n.right];
+    }
+
+    inline AABBNode& AABBTree::parent(AABBNode& n) {
+        return nodes[n.parent];
     }
 
     void AABBTree::recalculate_upwards(int32_t from_idx) {
@@ -52,25 +64,37 @@ namespace gtt {
             AABBNode& n = nodes[from_idx];
 
             if (!n.is_leaf()) {
-                n.bb = join(nodes[n.left].bb, nodes[n.right].bb);
+                n.bb = join(left(n).bb, right(n).bb);
             }
 
             from_idx = n.parent;
         }
     }
 
-    AABBNode& AABBTree::insert(const BoundingBox& bb) {
+    AABBNode& AABBTree::insert(void* data, const BoundingBox& bb) {
         int32_t insert_idx = nodes.size();
         nodes.push_back(AABBNode::empty());
         nodes[insert_idx].bb = bb;
+        nodes[insert_idx].data = data;
 
         if (insert_idx != root) {
+            constexpr float INF = std::numeric_limits<float>::max();
             int32_t node_idx = root;
             AABBNode* swap_node = &nodes[node_idx];
 
             while (!swap_node->is_leaf()) {
-                const float left_sa= swap_node->left != -1 ? join(bb, nodes[swap_node->left].bb).surface_area() - nodes[swap_node->left].bb.surface_area() : std::numeric_limits<float>::max();
-                const float right_sa = swap_node->right != -1 ? join(bb, nodes[swap_node->right].bb).surface_area() - nodes[swap_node->right].bb.surface_area() : std::numeric_limits<float>::max();
+                float left_sa = INF;
+                float right_sa = INF;
+
+                if (swap_node->left != -1) {
+                    AABBNode& sn_left = left(*swap_node);
+                    left_sa = join(bb, sn_left.bb).surface_area() - sn_left.bb.surface_area();
+                }
+
+                if (swap_node->right != -1) {
+                    AABBNode& sn_right = right(*swap_node);
+                    right_sa = join(bb, sn_right.bb).surface_area() - sn_right.bb.surface_area();
+                }
 
                 node_idx = left_sa < right_sa ? swap_node->left : swap_node->right;
                 swap_node = &nodes[node_idx];
@@ -86,8 +110,9 @@ namespace gtt {
             if (node_idx == root) {
                 root = empty_idx;
             } else {
-                if (nodes[nodes[node_idx].parent].left == node_idx) { nodes[nodes[node_idx].parent].left = empty_idx; } 
-                else { nodes[nodes[node_idx].parent].right = empty_idx; }
+                AABBNode& parent_node = parent(*swap_node);
+                uint8_t cond = (uint8_t) parent_node.right == node_idx;
+                parent_node.children[cond] = empty_idx;
             }
             
             empty_node->parent = swap_node->parent; empty_node->left = node_idx; empty_node->right = insert_idx;
