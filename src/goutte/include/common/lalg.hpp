@@ -431,7 +431,7 @@ namespace gtt {
             /** Compute the distance between two `VecLike`s. */
             template <VecLike L, VecLike R> requires std::is_default_constructible_v<VecValue<L>> && std::is_same_v<VecValue<L>,VecValue<R>>
             float distance(const L& l, const R& r) {
-                return std::sqrtf((float) distance_squared(l,r));
+                return std::sqrt((float) distance_squared(l,r));
             }
 
             /** Clamp all values in some `VecLike` between low and high thresholds. */
