@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <iostream>
+#include <cmath>
 // #include <ratio>
 
 #include "utils/Vector3D.hpp"
@@ -98,7 +99,7 @@ private:
     static constexpr float CUBE_SIZE = 1.f / 10.f;
 
     static float blob_simple(const glm::vec3& center, const glm::vec3& pt) {
-        return 1.f / (std::powf(center.x - pt.x, 2) + std::powf(center.y - pt.y, 2) + std::powf(center.z - pt.z, 2));
+        return 1.f / (std::pow(center.x - pt.x, 2) + std::pow(center.y - pt.y, 2) + std::pow(center.z - pt.z, 2));
     }
 
     float compute_all(const glm::vec3& pt) const {
