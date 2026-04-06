@@ -2,10 +2,11 @@
 
 #include <common/lalg.hpp>
 
+
 /** Simple representation of a 3D Bounding Box with a maximal point & a minimal point */
 struct BoundingBox {
-    gtt::common::lalg::vec3 max_point;
-    gtt::common::lalg::vec3 min_point;
+    gtt::lalg::vec3 max_point = gtt::lalg::vec3(0);
+    gtt::lalg::vec3 min_point = gtt::lalg::vec3(0);
 
     BoundingBox& intersection_mut(const BoundingBox& outer) {
         this->min_point = max(min_point, outer.min_point);
@@ -18,4 +19,35 @@ struct BoundingBox {
         this->max_point = max(max_point, other.max_point);
         return *this;
     }
+
+    constexpr gtt::lalg::vec3 get_center() const {
+        return ( max_point + min_point ) * 0.5f;
+    }
+
+    float volume() const {
+        return fold(max_point - min_point, 1.f, [](const float a, const float b) { 
+            return std::abs(a * b); 
+        });
+    }
+
+    float surface_area() const {
+        gtt::lalg::vec3 dimensions = map(max_point - min_point, [](const float a) { return std::abs(a); });
+        return 2 * (dimensions.x * dimensions.y + dimensions.y * dimensions.z + dimensions.z * dimensions.x );
+    }
 };
+
+namespace gtt {
+    BoundingBox join(const BoundingBox& b1, const BoundingBox& b2) {
+        return BoundingBox {
+            max(b1.max_point, b2.max_point),
+            min(b1.min_point, b2.min_point)
+        };
+    }
+
+    bool overlap(const BoundingBox& a, const BoundingBox& b) {
+        if (a.max_point.x < b.min_point.x || b.max_point.x < a.min_point.x) return false;
+        if (a.max_point.y < b.min_point.y || b.max_point.y < a.min_point.y) return false;
+        if (a.max_point.z < b.min_point.z || b.max_point.z < a.min_point.z) return false;
+        return true;
+    }
+}

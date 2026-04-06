@@ -95,10 +95,13 @@ void process_input(GLFWwindow* window, float deltaTime) {
         camera.position -= velocity * camera.front;
 
     glm::vec3 right = glm::normalize(glm::cross(camera.front, camera.up));
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         camera.position -= right * velocity;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        std::cout << "RIGHT" << std::endl;
+    } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         camera.position += right * velocity;
+        std::cout << "LEFT" << std::endl;
+    }
 }
 
 // Modify setup to set cursor callback

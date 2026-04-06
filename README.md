@@ -4,6 +4,8 @@
 
 [![Video Title](https://img.youtube.com/vi/GkIUIajTTPo/0.jpg)](https://www.youtube.com/watch?v=GkIUIajTTPo)
 
+Click the above image to view a short video demonstration ^^^
+
 **Minumum CPP Required: C++20**
 
 Build with `cmake --build <YOUR BUILD FOLDER NAME>`. Executable will be in the build folder. Project was built with windows in mind. Not too sure how this all runs on linux machines in complete honesty!

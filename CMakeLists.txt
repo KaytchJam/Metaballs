@@ -1,7 +1,6 @@
 # cmake is hell
 cmake_minimum_required(VERSION 3.5)
 project(metaballs)
-include(Ctest)
 
 # c++ ver
 set(CMAKE_CXX_STANDARD 20)

@@ -364,6 +364,7 @@ int help() {
 
 
 #include <iostream>
+#include <memory>
 
 #include "dependencies/glm/gtc/random.hpp"
 
