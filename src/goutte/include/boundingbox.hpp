@@ -45,9 +45,11 @@ namespace gtt {
     }
 
     bool overlap(const BoundingBox& a, const BoundingBox& b) {
-        return !((a.max_point.x < b.min_point.x || b.max_point.x < a.min_point.x)
-              || (a.max_point.y < b.min_point.y || b.max_point.y < a.min_point.y)
-              || (a.max_point.z < b.min_point.z || b.max_point.z < a.min_point.z));
+        return !(
+            (a.max_point.x < b.min_point.x || b.max_point.x < a.min_point.x) || 
+            (a.max_point.y < b.min_point.y || b.max_point.y < a.min_point.y) || 
+            (a.max_point.z < b.min_point.z || b.max_point.z < a.min_point.z)
+        );
     }
 
     BoundingBox expand(const BoundingBox& b, const float constant) {
