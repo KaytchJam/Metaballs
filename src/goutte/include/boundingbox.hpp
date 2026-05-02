@@ -45,9 +45,33 @@ namespace gtt {
     }
 
     bool overlap(const BoundingBox& a, const BoundingBox& b) {
-        if (a.max_point.x < b.min_point.x || b.max_point.x < a.min_point.x) return false;
-        if (a.max_point.y < b.min_point.y || b.max_point.y < a.min_point.y) return false;
-        if (a.max_point.z < b.min_point.z || b.max_point.z < a.min_point.z) return false;
-        return true;
+        return !((a.max_point.x < b.min_point.x || b.max_point.x < a.min_point.x)
+              || (a.max_point.y < b.min_point.y || b.max_point.y < a.min_point.y)
+              || (a.max_point.z < b.min_point.z || b.max_point.z < a.min_point.z));
+    }
+
+    BoundingBox expand(const BoundingBox& b, const float constant) {
+        const lalg::vec3 constant_vec(constant);
+        return BoundingBox {
+            b.max_point + constant_vec,
+            b.min_point - constant_vec
+        };
+    }
+
+    BoundingBox& expand_mut(BoundingBox& b, const float constant) {
+        const lalg::vec3 constant_vec(constant);
+        b.max_point += constant_vec;
+        b.min_point -= constant_vec;
+        return b;
+    }
+
+    BoundingBox scale(const BoundingBox& b, const float scalar) {
+        const float diagonal = lalg::distance(b.max_point, b.min_point);
+        return expand(b, diagonal * scalar - diagonal);
+    }
+
+    BoundingBox& scale_mut(BoundingBox& b, const float scalar) {
+        const float diagonal = lalg::distance(b.max_point, b.min_point);
+        return expand_mut(b, scalar);
     }
 }
