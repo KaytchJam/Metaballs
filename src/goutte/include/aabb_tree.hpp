@@ -47,19 +47,27 @@ namespace gtt {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
 
-        AABBNode& insert(void* data, const BoundingBox& bb);
+        int32_t insert(void* data, const BoundingBox& bb);
         void recalculate_upwards(int32_t from_idx);
 
         inline AABBNode* left(AABBNode* n);
         inline AABBNode* right(AABBNode* n);
         inline AABBNode* parent(AABBNode* n);
 
-        void simultaneous_traversal(int32_t a, int32_t b);
-
         template <typename F>
         void all_overlaps(F func);
 
         size_t count_leaves() const;
+
+        enum OverlapLeafState {
+            FIRST_IS_LEAF = 0,
+            SECOND_IS_LEAF = 1,
+            BOTH_IS_LEAF = 2,
+            NEITHER_IS_LEAF = 3,
+            NO_OVERLAP = 4
+        };
+
+        OverlapLeafState get_overlap_leaf_state(const AABBNode& a, const AABBNode& b) const;
     };
 
     inline AABBNode* AABBTree::left(AABBNode* n) {
@@ -82,6 +90,9 @@ namespace gtt {
         return count;
     }
 
+    /** Iteratively travel up the tree, starting from the `AABBNode` at index from_idx,
+     * and make its bounding box the result of joining the bounding boxes of its left
+     * child node and right child node. */
     void AABBTree::recalculate_upwards(int32_t from_idx) {
         while (from_idx != -1) {
             AABBNode* n = &nodes[from_idx];
@@ -94,10 +105,12 @@ namespace gtt {
         }
     }
 
-    AABBNode& AABBTree::insert(void* data, const BoundingBox& bb) {
+    /** Insert some data into the AABB Tree, where the data is associated with
+     * `BoundingBox` bb. The index of the inserted data is returned. */
+    int32_t AABBTree::insert(void* data, const BoundingBox& bb) {
         int32_t insert_idx = (int32_t) nodes.size();
         nodes.push_back(AABBNode::empty());
-        nodes[insert_idx].bb = bb;
+        nodes[insert_idx].bb = scale(bb, 1.5f);
         nodes[insert_idx].data = data;
 
         if (insert_idx != root) {
@@ -134,7 +147,7 @@ namespace gtt {
                 root = empty_idx;
             } else {
                 AABBNode* parent_node = parent(swap_node);
-                uint8_t cond = (uint8_t) parent_node->right == node_idx;
+                const uint8_t cond = (uint8_t) parent_node->right == node_idx;
                 parent_node->children[cond] = empty_idx;
             }
             
@@ -144,55 +157,79 @@ namespace gtt {
         }
 
         recalculate_upwards(nodes[insert_idx].parent);
-        return nodes[insert_idx];
+        return insert_idx;
     }
 
+    /** Helper function that takes in two `const AABBNode&` and returns the corresponding OverlapLeafState
+     * of these two Nodes. */
+    AABBTree::OverlapLeafState AABBTree::get_overlap_leaf_state(const AABBNode& a, const AABBNode& b) const {
+        if (!overlap(a.bb, b.bb)) {
+            return OverlapLeafState::NO_OVERLAP;
+        }
 
+        const bool a_is_leaf = a.is_leaf();
+        const bool b_is_leaf = b.is_leaf();
+        
+        OverlapLeafState out_state = OverlapLeafState::NEITHER_IS_LEAF;
+        if (a_is_leaf && b_is_leaf) {
+            out_state = OverlapLeafState::BOTH_IS_LEAF;
+        } else if (a_is_leaf) {
+            out_state = OverlapLeafState::FIRST_IS_LEAF;
+        } else if (b_is_leaf) {
+            out_state = OverlapLeafState::SECOND_IS_LEAF;
+        }
+
+        return out_state;
+    }
 
     template <typename F>
-    void AABBTree::all_overlaps(F func) {
-        std::vector<std::pair<int32_t,int32_t>> node_stack = { {root, root} };
+    void AABBTree::all_overlaps(F overlap_callback) {
+        using IndexPair = std::pair<int32_t,int32_t>;
+        std::vector<IndexPair> node_stack = {{root, root}};
         size_t stack_size = 1;
 
-        auto push_item = [](std::vector<std::pair<int32_t,int32_t>>& stack, size_t& ss, int32_t a, int32_t b) {
-            if (ss >= stack.size()) {
-                stack.push_back({ a, b});
-            } else {
-                stack[ss] = { a, b};
-            }
+        void (*push_item)(std::vector<IndexPair>&,size_t&,int32_t,int32_t) = [](std::vector<IndexPair>& stack, size_t& ss, int32_t a, int32_t b) {
+            if (ss >= stack.size()) { stack.push_back({a, b}); } 
+            else { stack[ss] = {a, b}; }
             ss += 1;
         };
 
         while (stack_size > 0) {
             // pop
             stack_size -= 1;
-            const std::pair<int32_t,int32_t> frame = node_stack[stack_size];
+            const IndexPair frame = node_stack[stack_size];
             AABBNode* A = &nodes[frame.first];
             AABBNode* B = &nodes[frame.second];
 
-            if (overlap(A->bb, B->bb)) {
-                if (A->is_leaf()) {
-                    if (B->is_leaf()) {
-                        if (frame.first != frame.second) {
-                            func(frame.first, frame.second);
-                        }
-                    } else {
-                        push_item(node_stack, stack_size, frame.first, B->left);
-                        push_item(node_stack, stack_size, frame.first, B->right);  
-                    }
-                } else {
-                    if (B->is_leaf()) {
-                        push_item(node_stack, stack_size, A->left, frame.second);
-                        push_item(node_stack, stack_size, A->right, frame.second);
-                    } else {
-                        if (A != B) {
-                            push_item(node_stack, stack_size, A->right, B->left);
-                        }
-                        push_item(node_stack, stack_size, A->left, B->left);
-                        push_item(node_stack, stack_size, A->left, B->right);
-                        push_item(node_stack, stack_size, A->right, B->right);
-                    }
-                }
+            switch(get_overlap_leaf_state(*A, *B)) {
+                // We found an overlap
+                case OverlapLeafState::BOTH_IS_LEAF:
+                    if (frame.first != frame.second) { overlap_callback(frame.first, frame.second); }
+                    break;
+
+                // continue traversal along the second node, B
+                case OverlapLeafState::FIRST_IS_LEAF:
+                    push_item(node_stack, stack_size, frame.first, B->left);
+                    push_item(node_stack, stack_size, frame.first, B->right); 
+                    break;
+                    
+                // continue traversal along the first node, A
+                case OverlapLeafState::SECOND_IS_LEAF:
+                    push_item(node_stack, stack_size, A->left, frame.second);
+                    push_item(node_stack, stack_size, A->right, frame.second);
+                    break;
+
+                // traverse down both A & B simultaneously
+                case OverlapLeafState::NEITHER_IS_LEAF:
+                    if (A != B) { push_item(node_stack, stack_size, A->right, B->left); }
+                    push_item(node_stack, stack_size, A->left, B->left);
+                    push_item(node_stack, stack_size, A->left, B->right);
+                    push_item(node_stack, stack_size, A->right, B->right);
+                    break;
+
+                // also covers the NO OVERLAP case. We do nothing.
+                default:
+                    break;
             }
         }
     }
