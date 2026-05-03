@@ -8,7 +8,7 @@ namespace gtt {
 
     struct AABBNode {
         BoundingBox bb;
-        void* data;
+        int32_t data_index;
         int32_t parent;
     
         union {
@@ -20,16 +20,11 @@ namespace gtt {
         };
 
         static AABBNode empty() {
-            return AABBNode { BoundingBox(), nullptr, -1, { -1, -1 } };
+            return AABBNode { BoundingBox(), -1, -1, { -1, -1 } };
         }
 
         inline bool is_leaf() const;
         inline AABBNode& update_links(int32_t parent, int32_t left, int32_t right);
-
-        template <typename T>
-        inline T* data_as() {
-            return static_cast<T*>(data);
-        }
     };
 
     bool AABBNode::is_leaf() const {
@@ -47,7 +42,7 @@ namespace gtt {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
 
-        int32_t insert(void* data, const BoundingBox& bb);
+        int32_t insert(int32_t data_index, const BoundingBox& bb);
         void recalculate_upwards(int32_t from_idx);
 
         inline AABBNode* left(AABBNode* n);
@@ -107,11 +102,11 @@ namespace gtt {
 
     /** Insert some data into the AABB Tree, where the data is associated with
      * `BoundingBox` bb. The index of the inserted data is returned. */
-    int32_t AABBTree::insert(void* data, const BoundingBox& bb) {
+    int32_t AABBTree::insert(int32_t data_index, const BoundingBox& bb) {
         int32_t insert_idx = (int32_t) nodes.size();
         nodes.push_back(AABBNode::empty());
-        nodes[insert_idx].bb = scale(bb, 1.5f);
-        nodes[insert_idx].data = data;
+        nodes[insert_idx].bb = scale(bb, 1.1f);
+        nodes[insert_idx].data_index = data_index;
 
         if (insert_idx != root) {
             constexpr float INF = std::numeric_limits<float>::max();
