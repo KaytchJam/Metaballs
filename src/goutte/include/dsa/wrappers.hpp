@@ -2,6 +2,8 @@
 
 namespace gtt {
     namespace dsa {
+
+        /** Namespace for Generic wrapper types. */
         namespace wrap {
 
             /** Iterator that holds a single pointer to a type `T`. When the iterator is advanced
