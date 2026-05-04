@@ -142,7 +142,7 @@ struct UnionFind {
 //     { f(acc, i) } -> std::same_as<T>;
 // };
 
-/** PrefixSum implementation */
+/** Data structure for collecting sets assigned via Union Find. */
 struct UnionFindCollector {
     std::vector<int32_t> counts;
     std::vector<int32_t> flat;
@@ -158,14 +158,6 @@ struct UnionFindCollector {
     struct ComponentGroup {
         const int32_t start;
         const int32_t end;
-
-        // template <typename T, FoldFunc<T> F>
-        // T fold(T acc, F&& f) const {
-        //     for (int32_t i = start; i < end; i++) {
-        //         acc = f(acc, flat[i]);
-        //     }
-        //     return acc;
-        // }
     };
 
     struct ComponentRangeIterator {
@@ -194,6 +186,7 @@ struct UnionFindCollector {
         using iterator_category = std::forward_iterator_tag;
         
         ComponentGroup operator*() const {
+            std::cout << "component_start_index = " << component_start_index << ", cur_index = " << cur_index << std::endl;
             return ComponentGroup {
                 component_start_index,
                 cur_index
@@ -201,7 +194,7 @@ struct UnionFindCollector {
         }
 
         ComponentRangeIterator& operator++() {
-            component_start_index = cur_index;
+            component_start_index = std::max(component_start_index, cur_index);
             return advance();
         }
 
@@ -226,7 +219,7 @@ struct UnionFindCollector {
 
         using iterator = ComponentRangeIterator;
         iterator begin() { return iterator(ufc, 0); }
-        iterator end() { return iterator(ufc, 0, ufc.size()); }
+        iterator end() { return iterator(ufc, (int32_t) ufc.size(), (int32_t) ufc.size()); }
     };
 
     UnionFindCollector& fit(UnionFind& uf) {
@@ -585,45 +578,52 @@ int naive_3() {
 
     UnionFindCollector ufc(uf);
 
-    std::cout << "FLAT = ";
-    for (int i = 0; i < ufc.size(); i++) {
-        std::cout << ufc.flat[i] << " ";
-    }
-    std::cout << "\nCOUNTS = ";
-    for (int i = 0; i < ufc.size(); i++) {
-        std::cout << ufc.counts[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "FLAT = ";
+    // for (int i = 0; i < ufc.size(); i++) {
+    //     std::cout << ufc.flat[i] << " ";
+    // }
+    // std::cout << "\nCOUNTS = ";
+    // for (int i = 0; i < ufc.size(); i++) {
+    //     std::cout << ufc.counts[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-
-    component_number prev_comp = -1;
-    int32_t last_index = -1;
-    BoundingBox bb;
-
-    for (int i = 0; i < ufc.size(); i++) {
-        const metaball_index m = ufc.flat[i];
-        const component_number c = ufc.counts[m];
-
-        if (c != prev_comp || prev_comp == -1) {
-            if (last_index != -1) {
-                std::cout << to_string(bb) << ", [ ";
-                for (metaball_index m : IntRange(last_index, i)) { std::cout << m << " "; }
-                std::cout << "], Component = " << ufc.counts[ufc.flat[last_index]] << std::endl;
-            }
-
-            last_index = i;
-            bb = blobs[m].get_bounding_box();
-            prev_comp = c;
-        } else {
-            bb = gtt::join(bb, blobs[m].get_bounding_box());
+    for (UnionFindCollector::ComponentGroup group : ufc.components()) {
+        std::cout << "SET = [ ";
+        for (int i = group.start; i < group.end; i++) {
+            std::cout << i << " ";
         }
     }
 
-    if (ufc.size() > 0) {
-        std::cout << to_string(bb) << " : [ ";
-        for (metaball_index m : IntRange(last_index, (int32_t) ufc.size())) { std::cout << m << " "; }
-        std::cout << "], Component = " << ufc.counts[ufc.flat[ufc.size() - 1]] << std::endl;
-    }
+
+    // component_number prev_comp = -1;
+    // int32_t last_index = -1;
+    // BoundingBox bb;
+
+    // for (int i = 0; i < ufc.size(); i++) {
+    //     const metaball_index m = ufc.flat[i];
+    //     const component_number c = ufc.counts[m];
+
+    //     if (c != prev_comp || prev_comp == -1) {
+    //         if (last_index != -1) {
+    //             std::cout << to_string(bb) << ", [ ";
+    //             for (metaball_index m : IntRange(last_index, i)) { std::cout << m << " "; }
+    //             std::cout << "], Component = " << ufc.counts[ufc.flat[last_index]] << std::endl;
+    //         }
+
+    //         last_index = i;
+    //         bb = blobs[m].get_bounding_box();
+    //         prev_comp = c;
+    //     } else {
+    //         bb = gtt::join(bb, blobs[m].get_bounding_box());
+    //     }
+    // }
+
+    // if (ufc.size() > 0) {
+    //     std::cout << to_string(bb) << " : [ ";
+    //     for (metaball_index m : IntRange(last_index, (int32_t) ufc.size())) { std::cout << m << " "; }
+    //     std::cout << "], Component = " << ufc.counts[ufc.flat[ufc.size() - 1]] << std::endl;
+    // }
     return EXIT_SUCCESS;
 }
 
