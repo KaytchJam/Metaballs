@@ -194,7 +194,7 @@ struct UnionFindCollector {
         }
 
         ComponentRangeIterator& operator++() {
-            component_start_index = std::max(component_start_index, cur_index);
+            component_start_index = cur_index;
             return advance();
         }
 
