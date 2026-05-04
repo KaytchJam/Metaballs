@@ -137,6 +137,11 @@ struct UnionFind {
     }
 };
 
+// template <typename F, typename T>
+// concept FoldFunc = requires(F f, T acc, int32_t i) {
+//     { f(acc, i) } -> std::same_as<T>;
+// };
+
 /** PrefixSum implementation */
 struct UnionFindCollector {
     std::vector<int32_t> counts;
@@ -146,14 +151,83 @@ struct UnionFindCollector {
         return counts.size();
     }
 
-    // component_number get_component(const metaball_index m) const {
-    //     return counts[m];
-    // }
+    inline int32_t component_of(const int32_t flat_index) {
+        return counts[flat[flat_index]];
+    }
 
-    /**
-     * template <typename F>
-     * FoldIterator<F> fold_components();
-     */
+    struct ComponentGroup {
+        const int32_t start;
+        const int32_t end;
+
+        // template <typename T, FoldFunc<T> F>
+        // T fold(T acc, F&& f) const {
+        //     for (int32_t i = start; i < end; i++) {
+        //         acc = f(acc, flat[i]);
+        //     }
+        //     return acc;
+        // }
+    };
+
+    struct ComponentRangeIterator {
+        int32_t cur_index = 0;
+        int32_t component_start_index = 0;
+        UnionFindCollector& ufc;
+
+        ComponentRangeIterator& advance() {
+            while (cur_index < ufc.size() && ufc.component_of(cur_index) == ufc.component_of(component_start_index)) {
+                cur_index += 1;
+            }
+            return *this;
+        }
+
+        ComponentRangeIterator(UnionFindCollector& u, int32_t start) : ufc(u), cur_index(start) {
+            advance();
+        }
+
+        ComponentRangeIterator(UnionFindCollector& u, int32_t start, int32_t component_start) 
+            : ufc(u), cur_index(start), component_start_index(component_start) {}
+
+        using value_type = ComponentGroup;
+        using reference = void;
+        using pointer = void;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+        
+        ComponentGroup operator*() const {
+            return ComponentGroup {
+                component_start_index,
+                cur_index
+            };
+        }
+
+        ComponentRangeIterator& operator++() {
+            component_start_index = cur_index;
+            return advance();
+        }
+
+        ComponentRangeIterator operator++(int) {
+            ComponentRangeIterator dupe = ComponentRangeIterator(ufc, cur_index, component_start_index);
+            (*this)++;
+            return dupe;
+        }
+
+        bool operator==(const ComponentRangeIterator& other) const {
+            return component_start_index == other.component_start_index && cur_index == other.cur_index;
+        }
+
+        bool operator!=(const ComponentRangeIterator& other) const {
+            return !(*this == other);
+        }
+    };
+
+    struct ComponentRange {
+        UnionFindCollector& ufc;
+        ComponentRange(UnionFindCollector& u) : ufc(u) {}
+
+        using iterator = ComponentRangeIterator;
+        iterator begin() { return iterator(ufc, 0); }
+        iterator end() { return iterator(ufc, 0, ufc.size()); }
+    };
 
     UnionFindCollector& fit(UnionFind& uf) {
         if (uf.size() != size()) {
@@ -181,8 +255,13 @@ struct UnionFindCollector {
 
     UnionFindCollector() : counts(), flat() {}
 
-    UnionFindCollector(UnionFind& uf) : counts(uf.parents.size(), 0), flat(uf.parents.size(), 0) {
+    UnionFindCollector(UnionFind& uf) 
+        : counts(uf.parents.size(), 0), flat(uf.parents.size(), 0) {
         fit(uf);
+    }
+
+    ComponentRange components() {
+        return ComponentRange(*this);
     }
 };
 
