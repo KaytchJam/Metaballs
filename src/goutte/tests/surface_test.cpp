@@ -1,39 +1,139 @@
+
+// GOUTTE COMMON
 #include <common/lalg.hpp>
+#include <common/wrappers.hpp>
+
+// GOUTTE
 #include <isosurface.hpp>
 #include <fieldrange.hpp>
 #include <aabb_tree.hpp>
 #include <metaball_presets.hpp>
 
+// STDLIB
 #include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <sstream>
 
-struct UnionFind {
-    std::vector<int32_t> parent;
-    std::vector<int32_t> rank;
+template <typename T>
+struct IndexedStack {
+    std::vector<T> container;
+    size_t stack_size = 0;
 
-    UnionFind(size_t n) : parent(n), rank(n,0) {
-        for (size_t i=0;i<n;i++) parent[i]=(int32_t)i;
+    IndexedStack reserve(size_t size) {
+        container.reserve(size);
+        return *this;
     }
 
-    int32_t find(int32_t x) {
-        if (parent[x] != x)
-            parent[x] = find(parent[x]);
-        return parent[x];
+    /** Push an item to the stack */
+    IndexedStack& push(const T& t) {
+        if (stack_size >= container.size()) {
+            container.push_back(t);
+        } else {
+            container[stack_size] = t;
+        }
+
+        stack_size += 1;
+        return *this;
     }
 
-    void unite(int32_t a, int32_t b) {
-        a = find(a);
-        b = find(b);
-        if (a == b) return;
+    // Pop an item off the stack, and return it by value
+    T pop() {
+        stack_size -= (int32_t) (stack_size > 0) *  1;
+        return container[stack_size];
+    }
 
-        if (rank[a] < rank[b]) std::swap(a,b);
-        parent[b] = a;
+    // Get the item at the top of the stack
+    T& top() {
+        return container[stack_size - 1];
+    }
 
-        if (rank[a] == rank[b])
-            rank[a]++;
+    // Return whether the stack is empty or not
+    bool empty() const {
+        return stack_size == 0;
+    }
+
+    // Reset the stack
+    IndexedStack& reset() {
+        stack_size = 0;
+        return *this;
     }
 };
 
-int main() {
+typedef int32_t uf_index;
+
+/** Impelmentation of a Disjoint Set Union, defined over a fixed number
+ * of elements / vertices N. */
+struct UnionFind {
+    std::vector<uf_index> parents;
+    std::vector<int32_t> sizes;
+    
+    using StackFrame = gtt::common::wrap::IndexWrapper<bool>;
+
+    // For the use of mimicking recursion. Allocated once for reuse
+    // in the various function calls.
+    IndexedStack<StackFrame> smoke;
+    
+    UnionFind(const size_t n) : parents(n), sizes(n,1), smoke() {
+        for (size_t i = 0; i < n;i++) {
+            parents[i] = (int32_t) i;
+        }
+
+        smoke.reserve(n);
+    }
+
+    /** Finds the 'representative' of the set containing
+     * `uf_index` x. */
+    uf_index find(const uf_index x) {
+        uf_index top_parent = parents[x];
+
+        smoke.push(StackFrame(false, x));
+        while (!smoke.empty()) {
+            StackFrame& frame = smoke.top();
+
+            // backtracking
+            if (*frame) {
+                parents[frame.index] = top_parent;
+                smoke.pop();
+
+            // first visit
+            } else {
+                frame.item = true;
+                if (parents[frame.index] == frame.index) {
+                    top_parent = frame.index;
+                    smoke.pop();
+                }
+            }
+        }
+
+        smoke.reset();
+        return top_parent;
+    }
+
+    /** Combines the set containing `uf_index a` and the set containing `uf_index b`. */
+    void unite(uf_index a, uf_index b) {
+        a = find(a);
+        b = find(b);
+
+        if (a == b) {
+            return;
+        }
+
+        if (sizes[a] < sizes[b]) {
+            std::swap(a, b);
+        }
+
+        parents[b] = a;
+        sizes[a] += sizes[b];
+    }
+};
+
+/** Implementation 1 for coalescing Bounding Boxes in an AABB Tree. Passes indices into 
+ * a fixed size buffer and tries to use the spatial locality of the tree traversal to 
+ * insert indices into component-sorted order. Unfortunately this approach fails in
+ * correctness! */
+int naive_1() {
     gtt::AABBTree tree;
 
     using KB = gtt::presets::KineticBlob;
@@ -46,8 +146,14 @@ int main() {
         KB(gtt::lalg::vec3(0, 4, -4), gtt::lalg::vec3(0), 2.f)
     };
 
-    for (auto& i : blobs) {
-        tree.insert(&i, i.get_bounding_box());
+    int N = sizeof(blobs) / sizeof(KB);
+
+    {
+        int index = 0;
+        for (auto& i : blobs) {
+            tree.insert(index, i.get_bounding_box());
+            index += 1;
+        }
     }
 
     std::cout << "Iterating through all nodes" << std::endl;
@@ -62,32 +168,303 @@ int main() {
     }
 
     std::cout << "Print all leaves: " << std::endl;
+    std::unordered_map<int32_t, int32_t> color;
+    color.reserve(N);
 
-    UnionFind uf(tree.nodes.size());
-    tree.all_overlaps([&uf](int32_t a, int32_t b) {
-        std::cout << a << " overlaps with " << b << std::endl;
-        uf.unite(a,b);
+    using IWrapper = gtt::common::wrap::IndexWrapper<int32_t>;
+    std::vector<IWrapper> blob_indices;
+    blob_indices.reserve(N);
+
+    // UnionFind uf(tree.nodes.size());
+    int global_color = 0;
+    tree.all_overlaps([&color,&global_color, &blob_indices, &tree](int32_t a, int32_t b) {
+        int color_local = global_color;
+        const int a_blob_index = tree.nodes[a].data_index;
+        const int b_blob_index = tree.nodes[b].data_index;
+
+        const bool has_a = color.find(a_blob_index) != color.end();
+        const bool has_b = color.find(b_blob_index) != color.end();
+
+        if (has_a && has_b) {
+            color_local = std::min(color[a_blob_index], color[b_blob_index]);
+            color[a_blob_index] = color_local;
+            color[b_blob_index] = color_local;
+        } else if (has_a) {
+            color_local = color[a_blob_index];
+            color[b_blob_index] = color_local;
+
+            blob_indices.push_back(IWrapper(color_local, b_blob_index));
+        } else if (has_b) {
+            color_local = color[b_blob_index];
+            color[a_blob_index] = color_local;
+
+            blob_indices.push_back(IWrapper(color_local, a_blob_index));
+        } else {
+            color[a_blob_index] = color_local;
+            color[b_blob_index] = color_local;
+            global_color += 1;
+
+            blob_indices.push_back(IWrapper(color_local, a_blob_index));
+            blob_indices.push_back(IWrapper(color_local, b_blob_index));
+        }
     });
 
-    std::unordered_map<int32_t, BoundingBox> merged;
-
-    for (int leaf = 0; leaf < (int) tree.nodes.size(); leaf++) {
-        if (tree.nodes[leaf].is_leaf()) {
-            int root = uf.find(leaf);
-    
-            if (!merged.contains(root))
-                merged[root] = tree.nodes[leaf].bb;
-            else
-                merged[root].join_mut(tree.nodes[leaf].bb);
+    for (int i = 0; i < N; i++) {
+        if (color.find(i) == color.end()) {
+            blob_indices.push_back(IWrapper(-1, i));
         }
+
+        const IWrapper& iw = blob_indices[i];
+        std::cout << "(BLOB INDEX=" << i << ", COLOR=" << *iw << ")" << std::endl;
     }
 
-    for (std::pair<const int32_t,BoundingBox>& groups : merged) {
-        std::cout << "> " << groups.first << std::endl;
-        BoundingBox& bb = groups.second;
-        std::cout << "\tMAX: (" << bb.max_point.x << "," << bb.max_point.y << "," << bb.max_point.z << ")\n";
-        std::cout << "\tMIN: (" << bb.min_point.x << "," << bb.min_point.y << "," << bb.min_point.z << ")\n";
+    struct UnionBB {
+        BoundingBox bb;
+        IntRange ir;
+    };
+
+    std::vector<UnionBB> bbs;
+    bbs.reserve(N);
+
+    int32_t last_color = -1;
+    int32_t start_index = -1;
+    BoundingBox bb;
+
+    int32_t cur_index = 0;
+    for (const IWrapper& iw : blob_indices) {
+        if (*iw != last_color || last_color == -1) {
+            if (start_index >= 0) {
+                bbs.push_back(UnionBB{ bb, IntRange(start_index, cur_index) });
+                // this data structure isn't actually needed, I believe we can do this lazily
+            }
+
+            start_index = cur_index;
+            last_color = *iw;
+            bb = blobs[iw.index].get_bounding_box();
+        } else {
+            bb = gtt::join(bb, blobs[iw.index].get_bounding_box());
+        }
+
+        cur_index += 1;
     }
+
+    if (blob_indices.size() > 0) {
+        bbs.push_back(UnionBB { bb, IntRange(start_index, (int32_t) blob_indices.size())});
+    }
+
+    int bb_index = 0;
+    for (UnionBB& ub : bbs) {
+        std::cout << "Bounding Box index = " << bb_index;
+
+        std::cout << ",\tBall Indices: [";
+        for (int i : ub.ir) {
+            std::cout << i << " ";
+        }
+        std::cout << "], ";
+
+        BoundingBox& bb = ub.bb;
+        std::cout << "\tMAX: (" << bb.max_point.x << "," << bb.max_point.y << "," << bb.max_point.z << ")";
+        std::cout << "\tMIN: (" << bb.min_point.x << "," << bb.min_point.y << "," << bb.min_point.z << ")\n";
+        bb_index += 1;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+using KB = gtt::presets::KineticBlob;
+
+template <typename T, size_t N>
+using Arr = T[N];
+
+typedef int32_t metaball_index;
+typedef int32_t aabbnode_index;
+typedef int32_t component_number;
+
+struct ComponentWrapper {
+    component_number component;
+    metaball_index m_idx;
+
+    template <size_t N>
+    KB& get_metaball(Arr<KB,N>& container) {
+        return container[m_idx];
+    }
+};
+
+std::string to_string(const BoundingBox& bb) {
+    std::stringstream ss;
+    ss << "[MAX: (" << bb.max_point.x << "," << bb.max_point.y << "," << bb.max_point.z << ")" 
+        << ", MIN: (" << bb.min_point.x << "," << bb.min_point.y << "," << bb.min_point.z << ")]";
+    return ss.str();
+}
+
+/** Impelemntation 2 for coalescing overlapping bounding boxes. It utilizes a graph
+ * data structure and then uses DFS to find all Connected Components */
+int naive_2() {
+    // Our List of (Kinetic) Metaballs
+    KB blobs[] = {
+        KB(),
+        KB(gtt::lalg::vec3(1.f)),
+        KB(gtt::lalg::vec3(-2.f)),
+        KB(gtt::lalg::vec3(-5.f)),
+        KB(gtt::lalg::vec3(0, 4, -4), gtt::lalg::vec3(0), 2.f)
+    };
+
+    const size_t num_metaballs = sizeof(blobs) / sizeof(KB);
+
+    std::cout << "Insert into AABBTree" << std::endl;
+    // Insert into the AABBTree
+    gtt::AABBTree tree;
+    int i = 0;
+    for (KB& blob : blobs) {
+        tree.insert(i, blob.get_bounding_box());
+        i += 1;
+    }
+
+    std::cout << "Build graph" << std::endl;
+    // BASIC IDEA: Build a graph for our metaballs, edges are metaballs w/ overlapping bounding boxes
+    std::unordered_map<metaball_index, std::unordered_set<metaball_index>> graph; // metaball index + edge head index
+
+    tree.all_overlaps([&tree, &graph](aabbnode_index a, aabbnode_index b) {
+        const metaball_index ma = tree.nodes[a].data_index;
+        const metaball_index mb = tree.nodes[b].data_index;
+        
+        if (graph.find(ma) == graph.end()) { graph[ma] = {};}
+        if (graph.find(mb) == graph.end()) { graph[mb] = {};}
+
+        graph[ma].insert(mb);
+        graph[mb].insert(ma);
+    });
+
+    std::cout << "Printing graph" << std::endl;
+    for (auto p : graph) {
+        std::cout << p.first << " : { ";
+        for (auto q : p.second) {
+            std::cout << q << " ";
+        }
+        std::cout << "}" << std::endl;
+    }
+    
+    // Find Connected Components:
+    std::cout << "Begin Connected Components Search" << std::endl;
+    std::unordered_set<metaball_index> visited;
+    std::vector<ComponentWrapper> components_buffer;
+    components_buffer.reserve(num_metaballs);
+
+    IndexedStack<metaball_index> bag = IndexedStack<metaball_index>().reserve(num_metaballs);
+    metaball_index entry = 0;
+    component_number current_component = 0;
+
+    while (visited.size() < num_metaballs) {
+
+        // Increment until we find a metaball_index not used yet. This will be
+        // our entry point into our DFS
+
+        std::cout << "Entry search: " << visited.size() << std::endl;
+        while (visited.find(entry) != visited.end()) {
+            entry += 1;
+        }
+
+        // DFS
+        std::cout << "DFS" << std::endl;
+        bag.push(entry);
+        while (!bag.empty()) {
+            const metaball_index cur = bag.pop();
+            if (visited.find(cur) == visited.end()) {
+                visited.insert(cur);
+                components_buffer.push_back(ComponentWrapper{current_component, cur});
+
+                for (metaball_index neighbor : graph[cur]) {
+                    bag.push(neighbor);
+                }
+            }
+        }
+        
+        current_component += 1;
+        bag.reset();
+    }
+
+    std::cout << "Coalesce metaballs" << std::endl;
+
+    // Coalesce Metaballs in the same component
+    component_number prev_comp = -1;
+    int32_t last_index = -1;
+    int32_t current_index = 0;
+    BoundingBox bb;
+
+    for (ComponentWrapper& cw : components_buffer) {
+        if (cw.component != prev_comp || prev_comp == -1) {
+            if (last_index != -1) {
+                std::cout << to_string(bb) << ", [ ";
+                for (metaball_index m : IntRange(last_index, current_index)) { std::cout << m << " "; }
+                std::cout << "], Component = " << cw.component << std::endl;
+            }
+
+            last_index = current_index;
+            bb = cw.get_metaball(blobs).get_bounding_box();
+            prev_comp = cw.component;
+        } else {
+            bb = gtt::join(bb, cw.get_metaball(blobs).get_bounding_box());
+        }
+
+        current_index += 1;
+    }
+
+    if (current_index >= 0) {
+        std::cout << to_string(bb) << ", [ ";
+        for (metaball_index m : IntRange(last_index, current_index)) { std::cout << m << " "; }
+        std::cout << "]" << std::endl;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+/** Implementation 3 of coalescing overlapping bounding boxes in an AABB Tree. This 3rd implementation
+ * uses a Disjoint Set Union. */
+int naive_3() {
+    // Our List of (Kinetic) Metaballs
+    KB blobs[] = {
+        KB(),
+        KB(gtt::lalg::vec3(1.f)),
+        KB(gtt::lalg::vec3(-2.f)),
+        KB(gtt::lalg::vec3(-5.f)),
+        KB(gtt::lalg::vec3(0, 4, -4), gtt::lalg::vec3(0), 2.f)
+    };
+
+    const size_t num_metaballs = sizeof(blobs) / sizeof(KB);
+
+    std::cout << "Insert into AABBTree" << std::endl;
+    // Insert into the AABBTree
+    gtt::AABBTree tree;
+    int i = 0;
+    for (KB& blob : blobs) {
+        tree.insert(i, blob.get_bounding_box());
+        i += 1;
+    }
+
+    UnionFind uf(num_metaballs);
+    tree.all_overlaps([&tree, &uf](aabbnode_index a, aabbnode_index b) {
+        uf.unite(tree.nodes[a].data_index, tree.nodes[b].data_index);
+    });
+
+    std::unordered_map<metaball_index, std::unordered_set<metaball_index>> graph;
+    for (int i : IntRange(0, num_metaballs)) {
+        graph[uf.find(i)].insert(i);
+    }
+
+    for (auto members : graph) {
+        // std::cout << to_string(bb) << ", [ ";
+        std::cout << members.first << " : [ ";
+        for (metaball_index m : members.second) { std::cout << m << " "; }
+        std::cout << "]" << std::endl;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int main() {
+    // naive_1();
+    naive_3();
 
     return EXIT_SUCCESS;
 }
