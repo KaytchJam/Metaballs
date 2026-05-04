@@ -111,6 +111,10 @@ struct UnionFind {
         return top_parent;
     }
 
+    bool is_root(const uf_index x) const {
+        return x == parents[x];
+    }
+
     /** Combines the set containing `uf_index a` and the set containing `uf_index b`. */
     void unite(uf_index a, uf_index b) {
         a = find(a);
@@ -126,6 +130,59 @@ struct UnionFind {
 
         parents[b] = a;
         sizes[a] += sizes[b];
+    }
+
+    size_t size() const {
+        return parents.size();
+    }
+};
+
+/** PrefixSum implementation */
+struct UnionFindCollector {
+    std::vector<int32_t> counts;
+    std::vector<int32_t> flat;
+
+    inline size_t size() const {
+        return counts.size();
+    }
+
+    // component_number get_component(const metaball_index m) const {
+    //     return counts[m];
+    // }
+
+    /**
+     * template <typename F>
+     * FoldIterator<F> fold_components();
+     */
+
+    UnionFindCollector& fit(UnionFind& uf) {
+        if (uf.size() != size()) {
+            counts = std::vector<int32_t>(uf.size());
+            flat = std::vector<int32_t>(uf.size());
+        }
+
+        const int32_t N = (int32_t) size();
+        int32_t sum = 0;
+        for (int32_t i = 0; i < N; i++) {
+            const int32_t count = (int32_t) uf.is_root(i) * uf.sizes[i];
+            counts[i] = sum;
+            sum += count;
+        }
+
+        for (int32_t i = 0; i < N; i++) {
+            const int32_t root = uf.find(i);
+            int32_t& root_count = counts[root];
+            flat[root_count] = i;
+            root_count += 1;
+        }
+
+        return *this;
+    }
+
+    UnionFindCollector() : counts(), flat() {}
+
+    UnionFindCollector(UnionFind& uf) : counts(uf.parents.size(), 0), flat(uf.parents.size(), 0) {
+        fit(uf);
     }
 };
 
@@ -447,18 +504,47 @@ int naive_3() {
         uf.unite(tree.nodes[a].data_index, tree.nodes[b].data_index);
     });
 
-    std::unordered_map<metaball_index, std::unordered_set<metaball_index>> graph;
-    for (int i : IntRange(0, num_metaballs)) {
-        graph[uf.find(i)].insert(i);
+    UnionFindCollector ufc(uf);
+
+    std::cout << "FLAT = ";
+    for (int i = 0; i < ufc.size(); i++) {
+        std::cout << ufc.flat[i] << " ";
+    }
+    std::cout << "\nCOUNTS = ";
+    for (int i = 0; i < ufc.size(); i++) {
+        std::cout << ufc.counts[i] << " ";
+    }
+    std::cout << std::endl;
+
+
+    component_number prev_comp = -1;
+    int32_t last_index = -1;
+    BoundingBox bb;
+
+    for (int i = 0; i < ufc.size(); i++) {
+        const metaball_index m = ufc.flat[i];
+        const component_number c = ufc.counts[m];
+
+        if (c != prev_comp || prev_comp == -1) {
+            if (last_index != -1) {
+                std::cout << to_string(bb) << ", [ ";
+                for (metaball_index m : IntRange(last_index, i)) { std::cout << m << " "; }
+                std::cout << "], Component = " << ufc.counts[ufc.flat[last_index]] << std::endl;
+            }
+
+            last_index = i;
+            bb = blobs[m].get_bounding_box();
+            prev_comp = c;
+        } else {
+            bb = gtt::join(bb, blobs[m].get_bounding_box());
+        }
     }
 
-    for (auto members : graph) {
-        // std::cout << to_string(bb) << ", [ ";
-        std::cout << members.first << " : [ ";
-        for (metaball_index m : members.second) { std::cout << m << " "; }
-        std::cout << "]" << std::endl;
+    if (ufc.size() > 0) {
+        std::cout << to_string(bb) << " : [ ";
+        for (metaball_index m : IntRange(last_index, (int32_t) ufc.size())) { std::cout << m << " "; }
+        std::cout << "], Component = " << ufc.counts[ufc.flat[ufc.size() - 1]] << std::endl;
     }
-
     return EXIT_SUCCESS;
 }
 
