@@ -56,7 +56,6 @@ namespace gtt {
 
             private:
                 Accessor accessor;
-            
             public:
                 inline size_t size() const;
                 inline int32_t component_of(const int32_t flat_index) const;
@@ -118,11 +117,16 @@ namespace gtt {
                         iterator end();
                 };
             
+                UnionFindCollector();
                 UnionFindCollector(const UnionFind& uf);
 
                 UnionFindCollector& fit(const UnionFind& uf);
                 ComponentRangeView components() const &;
                 ComponentRangeOwned components() &&;
+
+                const std::vector<uf_index_t>& mappings() const {
+                    return accessor.sorted_mappings;
+                }
         };
     }
 }
