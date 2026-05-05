@@ -5,29 +5,33 @@
 
 #include <vector>
 #include <cstdint>
+#include <iterator>
 
 namespace gtt {
     namespace dsa {
 
-        /** Impelmentation of a Disjoint Set Union, defined over a fixed number
+        /** Implementation of a Disjoint Set Union, defined over a fixed number
          * of elements / vertices N. */
         struct UnionFind {
             public:
                 using uf_index_t = int32_t;
                 using StackFrame = wrap::IndexWrapper<bool>;
+
             private:
                 std::vector<uf_index_t> parents;
                 std::vector<int32_t> sizes;
                 IndexedStack<StackFrame> stack;
+
             public:
                 UnionFind(const size_t n);
                 ~UnionFind();
 
-                uf_index_t find(const uf_index_t x);                        // find the representative node of the set containing `x`
-                UnionFind& unite(const uf_index_t a, const uf_index_t b);   // join the sets containing nodes `a` and `b`
+                uf_index_t find_mut(const uf_index_t x);                    // Find the representative node of the set containing `x`.
+                uf_index_t find(const uf_index_t x) const;                  // Find the representative node of the set containing `x`.
+                UnionFind& unite(const uf_index_t a, const uf_index_t b);   // Join the sets containing nodes `a` and `b`.
 
-                inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not
-                inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct
+                inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not.
+                inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct.
                 inline size_t subtree_size(const uf_index_t x) const;       // Returns the size of the subtree lead by `x`.
         };
 
@@ -38,117 +42,87 @@ namespace gtt {
          * Use `UnionFindCollector.fit(u)` to bind this collector to a Union Find object,
          * and `UnionFindCollector.components()` to get a range over each Union Find set. */
         struct UnionFindCollector {
-            std::vector<int32_t> counts;
-            std::vector<int32_t> flat;
+            public:
+                typedef UnionFind::uf_index_t uf_index_t;
 
-            inline size_t size() const {
-                return counts.size();
-            }
+                struct Accessor {
+                    std::vector<int32_t> counts;
+                    std::vector<uf_index_t> sorted_mappings;
 
-            inline int32_t component_of(const int32_t flat_index) {
-                return counts[flat[flat_index]];
-            }
+                    int32_t component_of(const int32_t flat_index) const;
+                    uf_index_t to_uf(const int32_t flat_index) const;
+                    inline size_t size() const;
+                };
 
-            struct ComponentGroup {
-                const int32_t start;
-                const int32_t end;
-            };
+            private:
+                Accessor accessor;
+            
+            public:
+                inline size_t size() const;
+                inline int32_t component_of(const int32_t flat_index) const;
+                inline uf_index_t to_uf(const int32_t flat_index) const;
 
-            struct ComponentRangeIterator {
-                int32_t cur_index = 0;
-                int32_t component_start_index = 0;
-                UnionFindCollector& ufc;
+                /** Simple indexable range representing  */
+                struct ComponentGroup {
+                    const int32_t start;
+                    const int32_t end;
+                };
 
-                ComponentRangeIterator& advance() {
-                    while (cur_index < ufc.size() && ufc.component_of(cur_index) == ufc.component_of(component_start_index)) {
-                        cur_index += 1;
-                    }
-                    return *this;
-                }
+                struct ComponentRangeIterator {
+                    private:
+                        int32_t cur_index = 0;
+                        int32_t component_start_index = 0;
+                        
+                        const Accessor& accessor;
 
-                ComponentRangeIterator(UnionFindCollector& u, int32_t start) : ufc(u), cur_index(start) {
-                    advance();
-                }
+                        /** Checks if two nodes are in the same component */
+                        inline bool component_equals(const int32_t a, const int32_t b) const;
+                        ComponentRangeIterator& advance();
 
-                ComponentRangeIterator(UnionFindCollector& u, int32_t start, int32_t component_start) 
-                    : ufc(u), cur_index(start), component_start_index(component_start) {}
+                    public:
+                        ComponentRangeIterator(const Accessor& u, int32_t start);
+                        ComponentRangeIterator(const Accessor& u, int32_t start, int32_t component_start);
 
-                using value_type = ComponentGroup;
-                using reference = void;
-                using pointer = void;
-                using difference_type = std::ptrdiff_t;
-                using iterator_category = std::forward_iterator_tag;
-                
-                ComponentGroup operator*() const {
-                    return ComponentGroup {
-                        component_start_index,
-                        cur_index
-                    };
-                }
+                        using value_type = ComponentGroup;
+                        using reference = void;
+                        using pointer = void;
+                        using difference_type = std::ptrdiff_t;
+                        using iterator_category = std::forward_iterator_tag;
+                        
+                        ComponentGroup operator*() const;
+                        ComponentRangeIterator& operator++();
+                        ComponentRangeIterator operator++(int);
+                        bool operator==(const ComponentRangeIterator& other) const;
+                        bool operator!=(const ComponentRangeIterator& other) const;
+                };
 
-                ComponentRangeIterator& operator++() {
-                    component_start_index = cur_index;
-                    return advance();
-                }
+                /** Non-owning view of the UnionFindCollector */
+                struct ComponentRangeView {
+                    private:
+                        const Accessor& accessor;
+                    public:
+                        ComponentRangeView(const UnionFindCollector& u);
+                        using iterator = ComponentRangeIterator;
+                        iterator begin();
+                        iterator end();
+                };
 
-                ComponentRangeIterator operator++(int) {
-                    ComponentRangeIterator dupe = ComponentRangeIterator(ufc, cur_index, component_start_index);
-                    (*this)++;
-                    return dupe;
-                }
+                /** Owning view of the UnionFindCollector */
+                struct ComponentRangeOwned {
+                    private:
+                        const Accessor accessor;
+                    public:
+                        ComponentRangeOwned(UnionFindCollector&& u);
+                        using iterator = ComponentRangeIterator;
+                        iterator begin();
+                        iterator end();
+                };
+            
+                UnionFindCollector(const UnionFind& uf);
 
-                bool operator==(const ComponentRangeIterator& other) const {
-                    return component_start_index == other.component_start_index && cur_index == other.cur_index;
-                }
-
-                bool operator!=(const ComponentRangeIterator& other) const {
-                    return !(*this == other);
-                }
-            };
-
-            /** Simple Range object. */
-            struct ComponentRange {
-                UnionFindCollector& ufc;
-                ComponentRange(UnionFindCollector& u) : ufc(u) {}
-
-                using iterator = ComponentRangeIterator;
-                iterator begin() { return iterator(ufc, 0); }
-                iterator end() { return iterator(ufc, (int32_t) ufc.size(), (int32_t) ufc.size()); }
-            };
-
-            UnionFindCollector& fit(UnionFind& uf) {
-                const int32_t N = (int32_t) uf.num_nodes();
-                if (N != size()) {
-                    counts = std::vector<int32_t>(N);
-                    flat = std::vector<int32_t>(N);
-                }
-
-                int32_t sum = 0;
-                for (int32_t i = 0; i < N; i++) {
-                    const int32_t count = (int32_t) uf.is_root(i) * uf.subtree_size(i);
-                    counts[i] = sum;
-                    sum += count;
-                }
-
-                for (int32_t i = 0; i < N; i++) {
-                    const int32_t root = uf.find(i);
-                    int32_t& root_count = counts[root];
-                    flat[root_count] = i;
-                    root_count += 1;
-                }
-
-                return *this;
-            }
-
-            UnionFindCollector(UnionFind& uf) 
-                : counts(uf.num_nodes(), 0), flat(uf.num_nodes(), 0) {
-                fit(uf);
-            }
-
-            /** Returns a range that iterates over each set in the fitted UnionFind */
-            ComponentRange components() {
-                return ComponentRange(*this);
-            }
+                UnionFindCollector& fit(const UnionFind& uf);
+                ComponentRangeView components() const &;
+                ComponentRangeOwned components() &&;
         };
     }
 }
