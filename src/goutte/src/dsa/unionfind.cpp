@@ -144,6 +144,14 @@ UnionFindCollector::ComponentRangeOwned UnionFindCollector::components() && {
     return ComponentRangeOwned(std::move(*this));
 }
 
+const UnionFindCollector::Accessor& UnionFindCollector::get_accessor() const & {
+    return accessor;
+}
+
+UnionFindCollector::Accessor UnionFindCollector::get_accessor() && {
+    return accessor;
+}
+
 using ComponentRangeIterator = UnionFindCollector::ComponentRangeIterator;
 using ComponentGroup = UnionFindCollector::ComponentGroup;
 using ComponentRangeView = UnionFindCollector::ComponentRangeView;
@@ -198,13 +206,13 @@ bool ComponentRangeIterator::operator!=(const ComponentRangeIterator& other) con
 
 // COMPONENT RANGE
 
-ComponentRangeView::ComponentRangeView(const UnionFindCollector& u) : accessor(accessor) {}
+ComponentRangeView::ComponentRangeView(const UnionFindCollector& u) : accessor(u.accessor) {}
 
-ComponentRangeView::iterator ComponentRangeView::begin() {
+ComponentRangeView::iterator ComponentRangeView::begin() const {
     return iterator(accessor, 0);
 }
 
-ComponentRangeView::iterator ComponentRangeView::end() {
+ComponentRangeView::iterator ComponentRangeView::end() const {
     return iterator(accessor, (int32_t) accessor.size(), (int32_t) accessor.size());
 }
 
@@ -213,10 +221,10 @@ ComponentRangeView::iterator ComponentRangeView::end() {
 ComponentRangeOwned::ComponentRangeOwned(UnionFindCollector&& u)
     : accessor(std::move(u.accessor.counts), std::move(u.accessor.sorted_mappings)) {}
 
-ComponentRangeOwned::iterator ComponentRangeOwned::begin() {
+ComponentRangeOwned::iterator ComponentRangeOwned::begin() const {
     return iterator(accessor, 0);
 }
 
-ComponentRangeOwned::iterator ComponentRangeOwned::end() {
+ComponentRangeOwned::iterator ComponentRangeOwned::end() const {
     return iterator(accessor, (int32_t) accessor.size(), (int32_t) accessor.size());
 }

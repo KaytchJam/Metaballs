@@ -102,8 +102,8 @@ namespace gtt {
                     public:
                         ComponentRangeView(const UnionFindCollector& u);
                         using iterator = ComponentRangeIterator;
-                        iterator begin();
-                        iterator end();
+                        iterator begin() const;
+                        iterator end() const;
                 };
 
                 /** Owning view of the UnionFindCollector */
@@ -113,8 +113,8 @@ namespace gtt {
                     public:
                         ComponentRangeOwned(UnionFindCollector&& u);
                         using iterator = ComponentRangeIterator;
-                        iterator begin();
-                        iterator end();
+                        iterator begin() const;
+                        iterator end() const;
                 };
             
                 UnionFindCollector();
@@ -124,9 +124,8 @@ namespace gtt {
                 ComponentRangeView components() const &;
                 ComponentRangeOwned components() &&;
 
-                const std::vector<uf_index_t>& mappings() const {
-                    return accessor.sorted_mappings;
-                }
+                const Accessor& get_accessor() const &;
+                Accessor get_accessor() &&;
         };
     }
 }
