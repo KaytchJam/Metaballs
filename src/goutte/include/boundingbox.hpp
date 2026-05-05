@@ -2,6 +2,8 @@
 
 #include <common/lalg.hpp>
 
+#include <limits>
+
 
 /** Simple representation of a 3D Bounding Box with a maximal point & a minimal point */
 struct BoundingBox {
@@ -33,6 +35,36 @@ struct BoundingBox {
     float surface_area() const {
         gtt::lalg::vec3 dimensions = map(max_point - min_point, [](const float a) { return std::abs(a); });
         return 2 * (dimensions.x * dimensions.y + dimensions.y * dimensions.z + dimensions.z * dimensions.x );
+    }
+
+    /** Returns an 'empty' `BoundingBox`, where its minimum point
+     * is positive infinity, and its maximum point is negative
+     * infinity. 
+     * 
+     * One property of this "empty bounding box" is that it
+     * acts as the identity element for the join operation,
+     * meaning... `join(a, empty()) = a`.
+     *  */
+    static constexpr BoundingBox empty() {
+        return BoundingBox {
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::max()
+        };
+    }
+
+    /** Returns a 'universal' `BoundingBox`, where its min point
+     * is negative infinity, and its max point is positive
+     * infinity.
+     * 
+     * One property of this "universal bounding box" is that it
+     * acts as the absorbing element for the join operation,
+     * meaning... `join(a, universal()) = universal()`.
+     */
+    static constexpr BoundingBox universal() {
+        return BoundingBox {
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::min()
+        };
     }
 };
 
@@ -74,6 +106,6 @@ namespace gtt {
 
     BoundingBox& scale_mut(BoundingBox& b, const float scalar) {
         const float diagonal = lalg::distance(b.max_point, b.min_point);
-        return expand_mut(b, scalar);
+        return expand_mut(b, diagonal * scalar - diagonal);
     }
 }
