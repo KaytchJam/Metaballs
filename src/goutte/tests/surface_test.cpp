@@ -1,7 +1,11 @@
 
 // GOUTTE COMMON
 #include <common/lalg.hpp>
-#include <common/wrappers.hpp>
+
+// GOUTTE DSA
+#include <dsa/wrappers.hpp>
+#include <dsa/indexstack.hpp>
+#include <dsa/unionfind.hpp>
 
 // GOUTTE
 #include <isosurface.hpp>
@@ -16,247 +20,7 @@
 #include <unordered_set>
 #include <sstream>
 
-template <typename T>
-struct IndexedStack {
-    std::vector<T> container;
-    size_t stack_size = 0;
-
-    IndexedStack reserve(size_t size) {
-        container.reserve(size);
-        return *this;
-    }
-
-    /** Push an item to the stack */
-    IndexedStack& push(const T& t) {
-        if (stack_size >= container.size()) {
-            container.push_back(t);
-        } else {
-            container[stack_size] = t;
-        }
-
-        stack_size += 1;
-        return *this;
-    }
-
-    // Pop an item off the stack, and return it by value
-    T pop() {
-        stack_size -= (int32_t) (stack_size > 0) *  1;
-        return container[stack_size];
-    }
-
-    // Get the item at the top of the stack
-    T& top() {
-        return container[stack_size - 1];
-    }
-
-    // Return whether the stack is empty or not
-    bool empty() const {
-        return stack_size == 0;
-    }
-
-    // Reset the stack
-    IndexedStack& reset() {
-        stack_size = 0;
-        return *this;
-    }
-};
-
 typedef int32_t uf_index;
-
-/** Impelmentation of a Disjoint Set Union, defined over a fixed number
- * of elements / vertices N. */
-struct UnionFind {
-    std::vector<uf_index> parents;
-    std::vector<int32_t> sizes;
-    
-    using StackFrame = gtt::common::wrap::IndexWrapper<bool>;
-
-    // For the use of mimicking recursion. Allocated once for reuse
-    // in the various function calls.
-    IndexedStack<StackFrame> smoke;
-    
-    UnionFind(const size_t n) : parents(n), sizes(n,1), smoke() {
-        for (size_t i = 0; i < n;i++) {
-            parents[i] = (int32_t) i;
-        }
-
-        smoke.reserve(n);
-    }
-
-    /** Finds the 'representative' of the set containing
-     * `uf_index` x. */
-    uf_index find(const uf_index x) {
-        uf_index top_parent = parents[x];
-
-        smoke.push(StackFrame(false, x));
-        while (!smoke.empty()) {
-            StackFrame& frame = smoke.top();
-
-            // backtracking
-            if (*frame) {
-                parents[frame.index] = top_parent;
-                smoke.pop();
-
-            // first visit
-            } else {
-                frame.item = true;
-                if (parents[frame.index] == frame.index) {
-                    top_parent = frame.index;
-                    smoke.pop();
-                }
-            }
-        }
-
-        smoke.reset();
-        return top_parent;
-    }
-
-    bool is_root(const uf_index x) const {
-        return x == parents[x];
-    }
-
-    /** Combines the set containing `uf_index a` and the set containing `uf_index b`. */
-    void unite(uf_index a, uf_index b) {
-        a = find(a);
-        b = find(b);
-
-        if (a == b) {
-            return;
-        }
-
-        if (sizes[a] < sizes[b]) {
-            std::swap(a, b);
-        }
-
-        parents[b] = a;
-        sizes[a] += sizes[b];
-    }
-
-    size_t size() const {
-        return parents.size();
-    }
-};
-
-// template <typename F, typename T>
-// concept FoldFunc = requires(F f, T acc, int32_t i) {
-//     { f(acc, i) } -> std::same_as<T>;
-// };
-
-/** Data structure for collecting sets assigned via Union Find. */
-struct UnionFindCollector {
-    std::vector<int32_t> counts;
-    std::vector<int32_t> flat;
-
-    inline size_t size() const {
-        return counts.size();
-    }
-
-    inline int32_t component_of(const int32_t flat_index) {
-        return counts[flat[flat_index]];
-    }
-
-    struct ComponentGroup {
-        const int32_t start;
-        const int32_t end;
-    };
-
-    struct ComponentRangeIterator {
-        int32_t cur_index = 0;
-        int32_t component_start_index = 0;
-        UnionFindCollector& ufc;
-
-        ComponentRangeIterator& advance() {
-            while (cur_index < ufc.size() && ufc.component_of(cur_index) == ufc.component_of(component_start_index)) {
-                cur_index += 1;
-            }
-            return *this;
-        }
-
-        ComponentRangeIterator(UnionFindCollector& u, int32_t start) : ufc(u), cur_index(start) {
-            advance();
-        }
-
-        ComponentRangeIterator(UnionFindCollector& u, int32_t start, int32_t component_start) 
-            : ufc(u), cur_index(start), component_start_index(component_start) {}
-
-        using value_type = ComponentGroup;
-        using reference = void;
-        using pointer = void;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::forward_iterator_tag;
-        
-        ComponentGroup operator*() const {
-            std::cout << "component_start_index = " << component_start_index << ", cur_index = " << cur_index << std::endl;
-            return ComponentGroup {
-                component_start_index,
-                cur_index
-            };
-        }
-
-        ComponentRangeIterator& operator++() {
-            component_start_index = cur_index;
-            return advance();
-        }
-
-        ComponentRangeIterator operator++(int) {
-            ComponentRangeIterator dupe = ComponentRangeIterator(ufc, cur_index, component_start_index);
-            (*this)++;
-            return dupe;
-        }
-
-        bool operator==(const ComponentRangeIterator& other) const {
-            return component_start_index == other.component_start_index && cur_index == other.cur_index;
-        }
-
-        bool operator!=(const ComponentRangeIterator& other) const {
-            return !(*this == other);
-        }
-    };
-
-    struct ComponentRange {
-        UnionFindCollector& ufc;
-        ComponentRange(UnionFindCollector& u) : ufc(u) {}
-
-        using iterator = ComponentRangeIterator;
-        iterator begin() { return iterator(ufc, 0); }
-        iterator end() { return iterator(ufc, (int32_t) ufc.size(), (int32_t) ufc.size()); }
-    };
-
-    UnionFindCollector& fit(UnionFind& uf) {
-        if (uf.size() != size()) {
-            counts = std::vector<int32_t>(uf.size());
-            flat = std::vector<int32_t>(uf.size());
-        }
-
-        const int32_t N = (int32_t) size();
-        int32_t sum = 0;
-        for (int32_t i = 0; i < N; i++) {
-            const int32_t count = (int32_t) uf.is_root(i) * uf.sizes[i];
-            counts[i] = sum;
-            sum += count;
-        }
-
-        for (int32_t i = 0; i < N; i++) {
-            const int32_t root = uf.find(i);
-            int32_t& root_count = counts[root];
-            flat[root_count] = i;
-            root_count += 1;
-        }
-
-        return *this;
-    }
-
-    UnionFindCollector() : counts(), flat() {}
-
-    UnionFindCollector(UnionFind& uf) 
-        : counts(uf.parents.size(), 0), flat(uf.parents.size(), 0) {
-        fit(uf);
-    }
-
-    ComponentRange components() {
-        return ComponentRange(*this);
-    }
-};
 
 /** Implementation 1 for coalescing Bounding Boxes in an AABB Tree. Passes indices into 
  * a fixed size buffer and tries to use the spatial locality of the tree traversal to 
@@ -300,7 +64,7 @@ int naive_1() {
     std::unordered_map<int32_t, int32_t> color;
     color.reserve(N);
 
-    using IWrapper = gtt::common::wrap::IndexWrapper<int32_t>;
+    using IWrapper = gtt::dsa::wrap::IndexWrapper<int32_t>;
     std::vector<IWrapper> blob_indices;
     blob_indices.reserve(N);
 
@@ -480,7 +244,7 @@ int naive_2() {
     std::vector<ComponentWrapper> components_buffer;
     components_buffer.reserve(num_metaballs);
 
-    IndexedStack<metaball_index> bag = IndexedStack<metaball_index>().reserve(num_metaballs);
+    gtt::dsa::IndexedStack<metaball_index> bag = gtt::dsa::IndexedStack<metaball_index>().reserve(num_metaballs);
     metaball_index entry = 0;
     component_number current_component = 0;
 
@@ -571,30 +335,26 @@ int naive_3() {
         i += 1;
     }
 
-    UnionFind uf(num_metaballs);
+    gtt::dsa::UnionFind uf(num_metaballs);
     tree.all_overlaps([&tree, &uf](aabbnode_index a, aabbnode_index b) {
         uf.unite(tree.nodes[a].data_index, tree.nodes[b].data_index);
     });
 
-    UnionFindCollector ufc(uf);
+    std::cout << "{" << std::endl;
+    for (int i : IntRange(0, uf.num_nodes())) {
+        std::cout << "\t" << i << " : " << uf.find(i) << std::endl;
+    }
+    std::cout << "}" << std::endl;
 
-    // std::cout << "FLAT = ";
-    // for (int i = 0; i < ufc.size(); i++) {
-    //     std::cout << ufc.flat[i] << " ";
-    // }
-    // std::cout << "\nCOUNTS = ";
-    // for (int i = 0; i < ufc.size(); i++) {
-    //     std::cout << ufc.counts[i] << " ";
-    // }
-    // std::cout << std::endl;
+    std::cout << "PRINTING OUT COMPONENTS: " << std::endl;
 
-    for (UnionFindCollector::ComponentGroup group : ufc.components()) {
+    for (auto group : gtt::dsa::UnionFindCollector(uf).components()) {
         std::cout << "SET = [ ";
         for (int i = group.start; i < group.end; i++) {
             std::cout << i << " ";
         }
+        std::cout << "]" << std::endl;
     }
-
 
     // component_number prev_comp = -1;
     // int32_t last_index = -1;
@@ -624,12 +384,18 @@ int naive_3() {
     //     for (metaball_index m : IntRange(last_index, (int32_t) ufc.size())) { std::cout << m << " "; }
     //     std::cout << "], Component = " << ufc.counts[ufc.flat[ufc.size() - 1]] << std::endl;
     // }
+
     return EXIT_SUCCESS;
 }
 
 int main() {
-    // naive_1();
-    naive_3();
+    using naive_test = int (*)();
+    naive_test tests[] = { naive_1, naive_2, naive_3 };
+    constexpr int test_index = 2;
+
+    std::cout << "Executing test 'naive_" << (test_index + 1) << "'!" << std::endl;
+    const int result = tests[test_index]();
+    std::cout << "Test ended with status = " << result << std::endl;
 
     return EXIT_SUCCESS;
 }
