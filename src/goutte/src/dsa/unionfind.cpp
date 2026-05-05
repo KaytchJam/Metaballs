@@ -114,7 +114,7 @@ UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
 
     int32_t sum = 0;
     for (int32_t i = 0; i < N; i++) {
-        const int32_t count = (int32_t) uf.is_root(i) & uf.subtree_size(i);
+        const int32_t count = (int32_t) uf.is_root(i) * (int32_t) uf.subtree_size(i);
         accessor.counts[i] = sum;
         sum += count;
     }
@@ -128,6 +128,8 @@ UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
 
     return *this;
 }
+
+UnionFindCollector::UnionFindCollector() : accessor() {}
 
 UnionFindCollector::UnionFindCollector(const UnionFind& uf) 
     : accessor(std::vector<int32_t>(uf.num_nodes(), 0), std::vector<uf_index_t>(uf.num_nodes(), 0)) {
