@@ -113,7 +113,7 @@ namespace gtt {
     public:
         template <typename T>
         explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {
-            static_assert(gtt::IsScalarFunction<T>::value, "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
+            static_assert(VALID_METABALL(T), "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
         }
     
         template <typename Derived>
