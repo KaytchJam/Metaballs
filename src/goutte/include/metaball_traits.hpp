@@ -29,7 +29,7 @@ namespace gtt {
      * (2) That is all.
      */
     template <typename T>
-    struct HasBoundingBox<T, std::void_t<decltype(&T::get_bounding_box)>> 
+    struct HasBoundingBox<T, std::void_t<decltype(std::declval<const T>().get_bounding_box())>>
         : std::is_same<decltype(std::declval<const T>().get_bounding_box()), BoundingBox> {};
 
 
@@ -45,4 +45,9 @@ namespace gtt {
                 IsScalarFunction<PBSF>,
                 HasBoundingBox<PBSF>
         > {};
+
+    /** HELPER MACROS! QUICKLY CHECK IF YOUR METABALL TYPE IS VALID */
+    #define VALID_METABALL(T) IsScalarFunction<T>::value
+    #define HAS_BOUNDING_BOX(T) HasBoundingBox<T>::value
+    #define VALID_BOUNDED_METABALL(T) IsBoundedScalarFunction<T>::value
 }
