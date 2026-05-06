@@ -1,6 +1,8 @@
 #include <dsa/unionfind.hpp>
+#include <cstring>
 
 using namespace gtt::dsa;
+
 
 // UNION FIND
 
@@ -64,6 +66,19 @@ UnionFind& UnionFind::unite(uf_index_t a, uf_index_t b) {
         sizes[a] += sizes[b];
     }
 
+    return *this;
+}
+
+UnionFind& UnionFind::add_vertex() {
+    parents.push_back((int32_t) num_nodes());
+    sizes.push_back(1);
+    return *this;
+}
+
+UnionFind& UnionFind::reset() {
+    const size_t N = parents.size();
+    for (int i = 0; i < N; i++) { parents[i] = i; }
+    std::memset(sizes.data(), 0, parents.size());
     return *this;
 }
 

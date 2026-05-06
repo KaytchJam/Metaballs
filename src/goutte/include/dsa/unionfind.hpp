@@ -29,6 +29,8 @@ namespace gtt {
                 uf_index_t find_mut(const uf_index_t x);                    // Find the representative node of the set containing `x`.
                 uf_index_t find(const uf_index_t x) const;                  // Find the representative node of the set containing `x`.
                 UnionFind& unite(const uf_index_t a, const uf_index_t b);   // Join the sets containing nodes `a` and `b`.
+                UnionFind& add_vertex();                                    // Adds a new set index 'N' to a UnionFind of size N
+                UnionFind& reset();
 
                 inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not.
                 inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct.
