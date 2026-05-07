@@ -15,6 +15,8 @@ struct FieldRange {
     FieldRange(const std::array<int32_t,6>& bounds);
     FieldRange(int32_t low, int32_t high);
     FieldRange(const IntRange& ir);
+    FieldRange(const IndexDim& low, const IndexDim& high);
+
     // FieldRange(const IndexDim& highs);
     ~FieldRange() = default;
     
