@@ -8,6 +8,7 @@ namespace gtt {
         struct InverseSquareBlob {
             lalg::vec3 m_center = lalg::vec3(0.0f);
             float m_scale = 1.0;
+            float m_influence = 1.2f;
 
             InverseSquareBlob(const lalg::vec3& center = lalg::vec3(0.0), const float scale = 1.0f) 
                 : m_center(center), m_scale(scale) {}
@@ -65,6 +66,7 @@ namespace gtt {
             lalg::vec3 m_center = lalg::vec3(0.f);
             lalg::vec3 m_velocity = lalg::vec3(0.f);
             float m_scale = 1.f;
+            float m_influence = 1.1f;
 
             KineticBlob(const lalg::vec3& center = lalg::vec3(0.0), const lalg::vec3& velocity = lalg::vec3(0.0), const float scale = 1.0f) 
                 : m_center(center), m_velocity(velocity), m_scale(scale) {}
@@ -82,7 +84,7 @@ namespace gtt {
             }
 
             BoundingBox get_bounding_box() const {
-                const lalg::vec3 sqrt_of_scale_vec(sqrtf(m_scale));
+                const lalg::vec3 sqrt_of_scale_vec(sqrtf(m_scale) * m_influence);
                 return BoundingBox{ m_center + sqrt_of_scale_vec, m_center - sqrt_of_scale_vec };
             }
         };
