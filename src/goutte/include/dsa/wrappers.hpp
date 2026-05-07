@@ -59,8 +59,8 @@ namespace gtt {
                 
                 using iterator = NullItemIterator<T>;
                 
-                iterator begin() { return NullItemIterator(&item); }
-                iterator end() { return NullItemIterator(); }
+                iterator begin() { return iterator(&item); }
+                iterator end() { return iterator(); }
             };
 
             /** Acts as a "mock" wrapper. It doesn't couple any information with the inner type `T`, and instead
@@ -70,6 +70,7 @@ namespace gtt {
                 T item;
                 
                 PlaceboWrapper(const T& t) : item(t) {};
+                PlaceboWrapper(T&& t) : item(t) {}
                 
                 T& operator*() { return item; }
                 const T& operator*() const { return item; }
@@ -79,8 +80,8 @@ namespace gtt {
                 
                 using iterator = NullItemIterator<T>;
                 
-                iterator begin() { return NullItemIterator(&item); }
-                iterator end() { return NullItemIterator(); }
+                iterator begin() { return iterator(&item); }
+                iterator end() { return iterator(); }
             };
         }
     }
