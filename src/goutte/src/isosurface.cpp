@@ -107,12 +107,12 @@ const IsoPoint& IsoSurface::get(uint32_t i) const {
 }
 
 IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) {
-    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    const uint32_t index = i + j * (m_partitions + 1) + k * (m_partitions + 1) * (m_partitions + 1);
     return get(index);
 }
 
 const IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) const {
-    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    const uint32_t index = i + j * (m_partitions + 1) + k * (m_partitions + 1) * (m_partitions + 1);
     return get(index);
 }
 
