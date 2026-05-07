@@ -121,6 +121,8 @@ namespace gtt {
              * data from said field. */
             const common::graphics::MeshData& construct_mesh();
 
+            const std::vector<lalg::vec4> construct_point_cloud();
+
             template <typename T>
             std::string to_string(const gtt::lalg::vec<T,3>& v) {
                 std::stringstream ss;
@@ -309,21 +311,42 @@ namespace gtt {
     }
 
     template <typename M>
+    const std::vector<lalg::vec4> MetaballEngine<M>::construct_point_cloud() {
+        std::vector<lalg::vec4> positions;
+        for (RenderGroup rg : metaballs.groups()) {
+            int count = 0;
+            for (IndexDim idx : rg.fr) {
+                IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
+                pt.density = sum_metaballs(rg, pt.position);
+                positions.emplace_back(pt.position.x, pt.position.y, pt.position.z, pt.density);
+                count += 1;
+            }
+
+            IndexDim diff = rg.fr.high() - rg.fr.low();
+            float volume = diff.x * diff.y * diff.z;
+
+            // std::cout << "Expected = " << volume << ", Actual = " << count << std::endl;
+        }
+
+        return positions;
+    }
+
+    template <typename M>
     const common::graphics::MeshData& MetaballEngine<M>::construct_mesh() {
         if (!is_dirty) {
             return mesh_data;
         }
 
-        std::cout << "IsoSurface shape: " << to_string(field.shape()) << std::endl;
+        // std::cout << "IsoSurface shape: " << to_string(field.shape()) << std::endl;
+        // std::cout << "Setting point densities\n" << std::endl;
 
-        std::cout << "Setting point densities\n" << std::endl;
         is_dirty = false;
         int32_t valid_points = 0;
         int i = 0;
         for (RenderGroup rg : metaballs.groups()) {
             // std::cout << "\nIterate through field range points" << std::endl;
-            print_render_group(rg, i);
-            std::cout << std::endl;
+            // print_render_group(rg, i);
+            // std::cout << std::endl;
             for (IndexDim idx : rg.fr) {
                 IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
                 pt.density = sum_metaballs(rg, pt.position.x, pt.position.y, pt.position.z);
@@ -343,29 +366,19 @@ namespace gtt {
         OutVertices cube_out_vertices = {};
         OutIndices cube_out_indices = {};
 
-        std::cout << "Initiate marching cube process" << std::endl;
+        // std::cout << "Initiate marching cube process" << std::endl;
         for (RenderGroup rg : metaballs.groups()) {
-            
-            std::cout << "[ ";
-            for (int32_t i : rg.ball_indices) {
-                std::cout << "{ " << i << " : " << to_string(metaballs.get_metaball(i).unwrap().m_center) << " } ";
-            }
-            std::cout << "]\n" << std::endl;
 
-
-            for (CubeView cv : MarchingCubeRange(field, rg.fr)) {
+            for (CubeView cv : MarchingCubeRange(field, FieldRange(rg.fr))) {
                 const CubeBitsResult cbr = compute_cube_bits(cv, ordered_iso_points);
                 
                 if (cbr.cube_bits != 0x0 && cbr.cube_bits != 0xFF) {
-                    std::cout << "[" << to_string(cv.fr.low()) << "," << to_string(cv.fr.high()) << "]" << std::endl;
                     const int16_t cube_edge_bits = edge_table[cbr.cube_bits];
                     const LerpedEdgePoints& leps = lerp_cube_edges(cube_edge_bits, lerped_edge_points, cbr.cube_isopoints);
                     const CubeTriData tri_data = build_cube_tris(rg, cbr.cube_bits, leps, cube_out_vertices, cube_out_indices);
     
                     std::copy(tri_data.vertices.begin(), tri_data.vertices.begin() + tri_data.end_index, std::back_inserter(mesh_data.vertices));
                     std::copy(tri_data.indices.begin(), tri_data.indices.begin() + tri_data.end_index, std::back_inserter(mesh_data.indices));
-
-                    std::cout << "VERTICES = " << mesh_data.vertices.size() << std::endl;
                 }
             }
         }
