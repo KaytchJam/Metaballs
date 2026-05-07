@@ -357,7 +357,8 @@ int help() {
     std::cout << "Please include a flag after the executable name. The options are:\n"
     << "\t1) -animation | -a : Play an animation of a paper folding/shaking that uses metaballs\n"
     << "\t2) -scenes | -s : View multiple rendered metaball scenes. Click left & right to change the scene. "
-    << "Move the camera by dragging w/ the mouse left-click, and travel around the scene with WASD"
+    << "Move the camera by dragging w/ the mouse left-click, and travel around the scene with WASD\n"
+    << "\t3) -bouncing | -b : View a simulation of kinetic blobs bouncing around the screen."
     << std::endl;
     return EXIT_SUCCESS;
 }
@@ -375,6 +376,20 @@ template <typename T> using Ptr = T*;
 #include <metaball_presets.hpp>
 #include <engine.hpp>
 
+std::string to_string(const BoundingBox& bb) {
+    std::stringstream ss;
+    ss << "[MAX: (" << bb.max_point.x << "," << bb.max_point.y << "," << bb.max_point.z << ")" 
+        << ", MIN: (" << bb.min_point.x << "," << bb.min_point.y << "," << bb.min_point.z << ")]";
+    return ss.str();
+}
+
+template <typename T>
+std::string to_string(const gtt::lalg::vec<T,3>& v) {
+    std::stringstream ss;
+    ss << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return ss.str();
+}
+
 int bouncing() {
     const gtt::lalg::vec3 center = gtt::lalg::vec3(0.f);
     const float side_length = 10.f;
@@ -386,9 +401,11 @@ int bouncing() {
     for (int i = 0; i < num_metaballs; i++) {
         gtt::lalg::vec3 position = gtt::lalg::vec3::from(glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f)));
         gtt::lalg::vec3 velocity = gtt::lalg::vec3::from(glm::sphericalRand(1.f));
-        engine.add_metaball(gtt::Metaball(gtt::presets::KineticBlob(position, velocity)));
+        int idx = engine.add_metaball(gtt::Metaball(gtt::presets::KineticBlob(position, velocity)));
+        std::cout << "CENTER: " << to_string(position) << " : " << to_string(engine.get_metaball(idx).get_bounding_box()) << std::endl;
     }
 
+    std::cout << "\n\nConstruct mesh" << std::endl;
     gtt::common::graphics::MeshData md = engine.construct_mesh();
 
     const int SCREEN_WIDTH = 640;
@@ -459,6 +476,7 @@ int bouncing() {
     float lastFrame = 0.f;
     // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
+    std::cout << "Render loop" << std::endl;
     while (!glfwWindowShouldClose(win)) {
         float currentFrame = (float) glfwGetTime();
         float deltaTime = currentFrame - lastFrame;
@@ -474,23 +492,23 @@ int bouncing() {
         glm::mat4 view = camera.get_view();
         glm::mat4 mvp = proj * view;
 
-        for (int i = 0; i < num_metaballs; i++) {
-            gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
-            gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
+        // for (int i = 0; i < num_metaballs; i++) {
+        //     gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+        //     gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
 
-            for (int i = 0; i < 3; i++) {
-                if (kb_pos[i] < -5.f + 1.0f) {
-                    kb_pos[i] = -4.0f;
-                    kb.m_velocity[i] *= -1;
-                } else if (kb_pos[i] > 5.f - 1.0f) {
-                    kb_pos[i] = 4.0f;
-                    kb.m_velocity[i] *= -1;
-                }
-            }
-        }
+        //     for (int i = 0; i < 3; i++) {
+        //         if (kb_pos[i] < -5.f + 1.0f) {
+        //             kb_pos[i] = -4.0f;
+        //             kb.m_velocity[i] *= -1;
+        //         } else if (kb_pos[i] > 5.f - 1.0f) {
+        //             kb_pos[i] = 4.0f;
+        //             kb.m_velocity[i] *= -1;
+        //         }
+        //     }
+        // }
         
-        engine.make_dirty();
-        md = engine.construct_mesh();
+        // engine.make_dirty();
+        // md = engine.construct_mesh();
         
         glBindVertexArray(VAO);
 
