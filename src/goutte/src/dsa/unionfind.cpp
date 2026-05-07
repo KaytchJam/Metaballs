@@ -90,6 +90,10 @@ size_t UnionFind::subtree_size(const uf_index_t x) const {
     return sizes[x];
 }
 
+const std::vector<int32_t>& UnionFind::get_parents() const {
+    return parents;
+}
+
 // UNION FIND COLLECTOR ACCESSOR
 
 using Accessor = UnionFindCollector::Accessor;
@@ -120,6 +124,8 @@ UnionFind::uf_index_t UnionFindCollector::to_uf(const int32_t flat_index) const 
     return accessor.to_uf(flat_index);
 }
 
+#include <iostream>
+
 UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
     const int32_t N = (int32_t) uf.num_nodes();
     if (N != size()) {
@@ -127,6 +133,13 @@ UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
         accessor.sorted_mappings = std::vector<int32_t>(N);
     }
 
+    std::cout << "UNION FIND PARENTS = [ ";
+    for (int i = 0; i < uf.num_nodes(); i++) {
+        std::cout << uf.find(i) << " ";
+    }
+    std::cout << "]" << std::endl;
+
+    
     int32_t sum = 0;
     for (int32_t i = 0; i < N; i++) {
         const int32_t count = (int32_t) uf.is_root(i) * (int32_t) uf.subtree_size(i);
@@ -141,10 +154,27 @@ UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
         root_count += 1;
     }
 
+    std::cout << "COUNTS = [ ";
+    for (int i = 0; i < uf.num_nodes(); i++) {
+        std::cout << accessor.counts[i] << " ";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "MAPPINGS = [ ";
+    for (int i = 0; i < uf.num_nodes(); i++) {
+        std::cout << accessor.sorted_mappings[i] << " ";
+    }
+    std::cout << "]" << std::endl;
+
+    for (int32_t i = 0; i < N; i++) {
+        accessor.counts[i] = uf.find(i);
+    }
+
     return *this;
 }
 
 UnionFindCollector::UnionFindCollector() : accessor() {}
+
 
 UnionFindCollector::UnionFindCollector(const UnionFind& uf) 
     : accessor(std::vector<int32_t>(uf.num_nodes(), 0), std::vector<uf_index_t>(uf.num_nodes(), 0)) {
