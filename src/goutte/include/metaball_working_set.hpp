@@ -9,6 +9,8 @@
 #include <dsa/unionfind.hpp>
 
 #include <span>
+#include <sstream>
+#include <iostream>
 
 namespace gtt {
     template <typename Range>
@@ -17,16 +19,39 @@ namespace gtt {
         Range ball_indices;
     };
 
+    std::string to_string(const BoundingBox& bb) {
+        std::stringstream ss;
+        ss << "[MAX: (" << bb.max_point.x << "," << bb.max_point.y << "," << bb.max_point.z << ")" 
+            << ", MIN: (" << bb.min_point.x << "," << bb.min_point.y << "," << bb.min_point.z << ")]";
+        return ss.str();
+    }
+
     FieldRange bbox_to_field(const IsoSurface& surface, const BoundingBox& bb) {
-        const gtt::lalg::ivec3 start = floor(surface.position_to_index(bb.min_point));
-        const gtt::lalg::ivec3 end = ceil(surface.position_to_index(bb.max_point));
+        std::cout << gtt::to_string(bb) << std::endl;
+        const int32_t max_index = surface.shape()[0];
+        const gtt::lalg::ivec3 start = clamp(lalg::ivec3(floor(surface.position_to_index(bb.min_point))), 0, max_index);
+        const gtt::lalg::ivec3 end = clamp(lalg::ivec3(ceil(surface.position_to_index(bb.max_point))), 0, max_index);
         return FieldRange({start.x, end.x, start.y, end.y, start.z, end.z});
     };
 
     /** Container for a set of Metaballs in the Metaball Engine. Has specializations
      * such that it optimizes for when the metaball type has boudning boxes or not. */
     template <typename M, bool B = VALID_BOUNDED_METABALL(M)>
-    struct MetaballWorkingSet {};
+    struct MetaballWorkingSet {
+        using GroupRangeType = IntRange;
+        using RenderGroup = MetaballRenderGroup<GroupRangeType>;
+        using MetaballRenderGroupRange = dsa::wrap::PlaceboWrapper<RenderGroup>;
+
+        static constexpr bool has_bounding_box = false;
+
+        MetaballWorkingSet(IsoSurface& s);
+        ~MetaballWorkingSet();
+
+        size_t add_metaball(M&& m) = 0;
+        M& get_metaball(const size_t i);
+        const M& get_metaball(const size_t i) const;
+        MetaballRenderGroupRange groups() &;
+    };
     
     /** Specialization for types `M` that don't satisfy `HasBoundingBox<M>`. */
     template <typename M>
@@ -41,19 +66,7 @@ namespace gtt {
         using MetaballRenderGroupRange = dsa::wrap::PlaceboWrapper<RenderGroup>;
 
         MetaballWorkingSet(const IsoSurface& s) 
-            : balls(), surface(s) {
-        }
-        
-        // struct MetaballRenderGroupRange {
-        //     dsa::wrap::PlaceboWrapper<MetaballRenderGroup> range;
-        //     using iterator = dsa::wrap::PlaceboWrapper<MetaballRenderGroup>::iterator;
-
-        //     MetaballRenderGroupRange(std::vector<dsa::wrap::PlaceboWrapper<M>>& v, IsoSurface& s)
-        //         : range(MetaballRenderGroup(FieldRange(0, s.shape()[0] - 1), IntRange(0, (int32_t) balls.size())))
-
-        //     iterator begin() { return range.begin(); }
-        //     iterator end() { return range.end(); }
-        // };
+            : balls(), surface(s) {}
 
         MetaballRenderGroupRange groups() const & { 
             return MetaballRenderGroupRange(
@@ -66,12 +79,16 @@ namespace gtt {
 
         size_t add_metaball(M&& m) {
             size_t index = balls.size();
-            balls.push_back(dsa::wrap::PlaceboWrapper<M>(m));
+            balls.emplace_back(std::move(m));
             return index;
         }
 
         /** Get the metaball in this Metaball Engine at index i */
         M& get_metaball(const size_t i) {
+            return *balls[i];
+        }
+
+        const M& get_metaball(const size_t i) const {
             return *balls[i];
         }
     };
@@ -121,7 +138,7 @@ namespace gtt {
 
                 MetaballRenderGroupRangeIterator& advance() {
                     while (cur_index < accessor->size() && component_equals(cur_index, component_start_index)) {
-                        accumulator = join(accumulator, accessor.balls[cur_index]->get_bounding_box());
+                        accumulator = join(accumulator, accessor.balls[accessor.accessor.sorted_mappings[cur_index]]->get_bounding_box());
                         cur_index += 1;
                     }
                     return *this;
@@ -143,6 +160,7 @@ namespace gtt {
                 using iterator_category = std::forward_iterator_tag;
                 
                 value_type operator*() const  {
+                    std::cout << "group : " << accessor->component_of(component_start_index) << ", start = " << component_start_index << " , end = " << cur_index <<  std::endl;
                     return value_type(
                         bbox_to_field(accessor.surface, accumulator),
                         std::span(accessor.accessor.sorted_mappings.data() + component_start_index, (size_t) cur_index - component_start_index )
@@ -151,6 +169,7 @@ namespace gtt {
 
                 MetaballRenderGroupRangeIterator& operator++() {
                     component_start_index = cur_index;
+                    accumulator = BoundingBox::empty();
                     return advance();
                 }
 
@@ -182,7 +201,7 @@ namespace gtt {
             size_t index = balls.size();
             int32_t node_index = tree.insert((int32_t) index, m.get_bounding_box());
 
-            balls.push_back(dsa::wrap::IndexWrapper<M>(m, node_index));
+            balls.emplace_back(std::move(m), node_index);
             tree.nodes[node_index].data_index = (int32_t) index;
             joiner.add_vertex();
 
@@ -194,7 +213,7 @@ namespace gtt {
             if (regenerate_groups) {
                 std::cout << "Re-fitting UnionFindCollector to UnionFind" << std::endl;
 
-                gtt::AABBTree tree_local = tree;
+                gtt::AABBTree& tree_local = tree;
                 gtt::dsa::UnionFind& joiner_local = joiner;
                 tree_local.all_overlaps([&tree_local, &joiner_local](int32_t a, int32_t b) {
                     joiner_local.unite(tree_local.nodes[a].data_index, tree_local.nodes[b].data_index);
@@ -204,20 +223,6 @@ namespace gtt {
                 regenerate_groups = false;
             }
 
-            // std::cout << "Mappings [ ";
-            // for (auto x : collector.get_accessor().sorted_mappings) {
-            //     std::cout << x << " ";
-            // }
-            // std::cout << "]" << std::endl;
-
-            // std::cout << "Components [ ";
-            // for (auto x : collector.get_accessor().counts) {
-            //     std::cout << x << " ";
-            // }
-            // std::cout << "]" << std::endl;
-
-            // std::cout << "Constructing & Returning Group Range" << std::endl;
-
             return MetaballRenderGroupRange(
                 AccessorPlus(collector.get_accessor(), balls, surface)
             );
@@ -225,6 +230,10 @@ namespace gtt {
 
         /** Get the metaball in this Metaball Engine at index i */
         M& get_metaball(const size_t i) {
+            return *balls[i];
+        }
+
+        const M& get_metaball(const size_t i) const {
             return *balls[i];
         }
     };
