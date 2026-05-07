@@ -28,7 +28,7 @@ namespace gtt {
 
     FieldRange bbox_to_field(const IsoSurface& surface, const BoundingBox& bb) {
         std::cout << gtt::to_string(bb) << std::endl;
-        const int32_t max_index = surface.shape()[0];
+        const int32_t max_index = surface.shape()[0] - 1;
         const gtt::lalg::ivec3 start = clamp(lalg::ivec3(floor(surface.position_to_index(bb.min_point))), 0, max_index);
         const gtt::lalg::ivec3 end = clamp(lalg::ivec3(ceil(surface.position_to_index(bb.max_point))), 0, max_index);
         return FieldRange({start.x, end.x, start.y, end.y, start.z, end.z});
