@@ -47,8 +47,8 @@ struct BoundingBox {
      *  */
     static constexpr BoundingBox empty() {
         return BoundingBox {
-            std::numeric_limits<float>::min(),
-            std::numeric_limits<float>::max()
+            -std::numeric_limits<float>::infinity(),
+            std::numeric_limits<float>::infinity()
         };
     }
 
@@ -62,8 +62,8 @@ struct BoundingBox {
      */
     static constexpr BoundingBox universal() {
         return BoundingBox {
-            std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::min()
+            std::numeric_limits<float>::infinity(),
+            -std::numeric_limits<float>::infinity()
         };
     }
 };
