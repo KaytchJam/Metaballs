@@ -30,11 +30,12 @@ namespace gtt {
                 uf_index_t find(const uf_index_t x) const;                  // Find the representative node of the set containing `x`.
                 UnionFind& unite(const uf_index_t a, const uf_index_t b);   // Join the sets containing nodes `a` and `b`.
                 UnionFind& add_vertex();                                    // Adds a new set index 'N' to a UnionFind of size N
-                UnionFind& reset();
+                UnionFind& reset();                                         // Reset the UnionFind sets to all be disjoint
 
                 inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not.
                 inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct.
                 inline size_t subtree_size(const uf_index_t x) const;       // Returns the size of the subtree lead by `x`.
+                inline const std::vector<uf_index_t>& get_parents() const;
         };
 
         /** Data structure for collecting sets assigned via Union Find. Internally performs
