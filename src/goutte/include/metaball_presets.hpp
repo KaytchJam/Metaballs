@@ -13,11 +13,10 @@ namespace gtt {
                 : m_center(center), m_scale(scale) {}
 
             float operator()(float x, float y, float z) const {
-                return m_scale / (
-                    (float) std::pow(m_center.x - x, 2) + 
-                    (float) std::pow(m_center.y - y, 2) + 
-                    (float) std::pow(m_center.z - z, 2)
-                );
+                const float dx = m_center.x - x;
+                const float dy = m_center.y - y;
+                const float dz = m_center.z - z;
+                return m_scale / (dx*dx + dy*dy + dz*dz);
             }
 
             BoundingBox get_bounding_box() const {
@@ -55,12 +54,10 @@ namespace gtt {
                 : m_center(center), m_scale(scale), m_eps(eps) {}
 
             float operator()(float x, float y, float z) const {
-                return m_scale / (
-                    (float) std::pow(m_center.x - x, 4) +
-                    (float) std::pow(m_center.y - y, 4) +
-                    (float) std::pow(m_center.z - z, 4) +
-                    m_eps
-                );
+                const float dx = m_center.x - x;
+                const float dy = m_center.y - y;
+                const float dz = m_center.z - z;
+                return m_scale / (dx*dx*dx*dx + dy*dy*dy*dy + dz*dz*dz*dz + m_eps);
             }
         };
 
@@ -73,11 +70,10 @@ namespace gtt {
                 : m_center(center), m_velocity(velocity), m_scale(scale) {}
 
             float operator()(float x, float y, float z) const {
-                return m_scale / (
-                    (float) std::pow(m_center.x - x, 2) + 
-                    (float) std::pow(m_center.y - y, 2) + 
-                    (float) std::pow(m_center.z - z, 2)
-                );
+                const float dx = m_center.x - x;
+                const float dy = m_center.y - y;
+                const float dz = m_center.z - z;
+                return m_scale / (dx*dx + dy*dy + dz*dz);
             }
 
             lalg::vec3& update(const float dt) {
