@@ -10,8 +10,8 @@ namespace gtt {
             float m_scale = 1.0;
             float m_influence = 1.2f;
 
-            InverseSquareBlob(const lalg::vec3& center = lalg::vec3(0.0), const float scale = 1.0f) 
-                : m_center(center), m_scale(scale) {}
+            InverseSquareBlob(const lalg::vec3& center = lalg::vec3(0.0), const float scale = 1.0f, const float influence = 1.5f) 
+                : m_center(center), m_scale(scale), m_influence(influence) {}
 
             float operator()(float x, float y, float z) const {
                 const float dx = m_center.x - x;
@@ -66,10 +66,10 @@ namespace gtt {
             lalg::vec3 m_center = lalg::vec3(0.f);
             lalg::vec3 m_velocity = lalg::vec3(0.f);
             float m_scale = 1.f;
-            float m_influence = 1.1f;
+            float m_influence = 1.5f;
 
-            KineticBlob(const lalg::vec3& center = lalg::vec3(0.0), const lalg::vec3& velocity = lalg::vec3(0.0), const float scale = 1.0f) 
-                : m_center(center), m_velocity(velocity), m_scale(scale) {}
+            KineticBlob(const lalg::vec3& center = lalg::vec3(0.0), const lalg::vec3& velocity = lalg::vec3(0.0), const float scale = 1.0f, const float influence = 1.5f) 
+                : m_center(center), m_velocity(velocity), m_scale(scale), m_influence(influence) {}
 
             float operator()(float x, float y, float z) const {
                 const float dx = m_center.x - x;
