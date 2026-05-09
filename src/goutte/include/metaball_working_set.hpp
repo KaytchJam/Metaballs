@@ -61,6 +61,7 @@ namespace gtt {
         
         static constexpr bool has_bounding_box = false;
 
+        using BallContainer = std::vector<dsa::wrap::PlaceboWrapper<M>>;
         using GroupRangeType = IntRange;
         using RenderGroup = MetaballRenderGroup<GroupRangeType>;
         using MetaballRenderGroupRange = dsa::wrap::PlaceboWrapper<RenderGroup>;
@@ -106,13 +107,14 @@ namespace gtt {
 
         static constexpr bool has_bounding_box = true;
 
+        using BallContainer = std::vector<dsa::wrap::IndexWrapper<M>>;
         using Accessor = dsa::UnionFindCollector::Accessor;
         using GroupRangeType = std::span<const int32_t>;
         using RenderGroup = MetaballRenderGroup<GroupRangeType>;
 
         struct AccessorPlus {
             const Accessor& accessor;
-            const std::vector<dsa::wrap::IndexWrapper<M>>& balls;
+            const BallContainer& balls;
             const IsoSurface& surface;
             const Accessor* operator->() const { return &accessor; }
         };
@@ -213,10 +215,18 @@ namespace gtt {
             if (regenerate_groups) {
                 std::cout << "Re-fitting UnionFindCollector to UnionFind" << std::endl;
 
+                BallContainer& balls_local = balls;
                 gtt::AABBTree& tree_local = tree;
                 gtt::dsa::UnionFind& joiner_local = joiner;
-                tree_local.all_overlaps([&tree_local, &joiner_local](int32_t a, int32_t b) {
-                    joiner_local.unite(tree_local.nodes[a].data_index, tree_local.nodes[b].data_index);
+
+                tree_local.all_overlaps([&balls_local, &tree_local, &joiner_local](const int32_t a, const int32_t b) {
+                    const int32_t mball_a = tree_local.nodes[a].data_index;
+                    const int32_t mball_b = tree_local.nodes[b].data_index;
+
+                    // the AABB Bounding Boxes overlap, but do the ACTUAL bounds overlap themselves?
+                    if (overlap(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
+                        joiner_local.unite(mball_a, mball_b);
+                    }
                 });
     
                 collector.fit(joiner);
