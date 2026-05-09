@@ -59,7 +59,7 @@ namespace gtt {
         public:
             /** Create a Metaball engine that constructs a `SCALAR FIELD` centered on `center` with a side length of `side_length`,
              * a resolution (# of divisions per axis in the scalar field), and an isovalue to test passed in metaballs against. */
-            MetaballEngine(const lalg::vec3& center, const float side_length, const int32_t resolution, const float isovalue = 1.0f);
+            MetaballEngine(const lalg::vec3& center, const float side_length, const int32_t resolution = 5, const float isovalue = 1.0f);
 
             ~MetaballEngine() {}
 
@@ -313,8 +313,10 @@ namespace gtt {
     template <typename M>
     const std::vector<lalg::vec4> MetaballEngine<M>::construct_point_cloud() {
         std::vector<lalg::vec4> positions;
+
+        int32_t total_points = 0;
         for (RenderGroup rg : metaballs.groups()) {
-            int count = 0;
+            int32_t count = 0;
             for (IndexDim idx : rg.fr) {
                 IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
                 pt.density = sum_metaballs(rg, pt.position);
@@ -323,10 +325,14 @@ namespace gtt {
             }
 
             IndexDim diff = rg.fr.high() - rg.fr.low();
-            float volume = diff.x * diff.y * diff.z;
+            int32_t volume = diff.x * diff.y * diff.z;
 
-            // std::cout << "Expected = " << volume << ", Actual = " << count << std::endl;
+            std::cout << "Expected = " << volume << ", Actual = " << count << std::endl;
+            total_points += count;
         }
+
+        float total_search_space = (float) total_points / (float) field.indices();
+        std::cout << "Processed " << (total_search_space * 100.f) << "% of the IsoSurface." << std::endl;
 
         return positions;
     }
