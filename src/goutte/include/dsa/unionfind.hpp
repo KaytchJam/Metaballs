@@ -31,6 +31,7 @@ namespace gtt {
                 UnionFind& unite(const uf_index_t a, const uf_index_t b);   // Join the sets containing nodes `a` and `b`.
                 UnionFind& add_vertex();                                    // Adds a new set index 'N' to a UnionFind of size N
                 UnionFind& reset();                                         // Reset the UnionFind sets to all be disjoint
+                UnionFind& isolate(const uf_index_t a);                     // Make node `a` disjoint. 
 
                 inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not.
                 inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct.
