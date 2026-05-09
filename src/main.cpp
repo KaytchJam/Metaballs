@@ -390,6 +390,13 @@ std::string to_string(const gtt::lalg::vec<T,3>& v) {
     return ss.str();
 }
 
+template <typename T>
+std::string to_string(const gtt::lalg::vec<T,4>& v) {
+    std::stringstream ss;
+    ss << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return ss.str();
+}
+
 int bouncing() {
     const gtt::lalg::vec3 center = gtt::lalg::vec3(0.f);
     const float side_length = 10.f;
@@ -489,6 +496,8 @@ int bouncing() {
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // std::cout << "CAMERA FRONT = (" << camera.front.x << " " << camera.front.y << " " << camera.front.z << ")" << std::endl;
+
         glm::mat4 view = camera.get_view();
         glm::mat4 mvp = proj * view;
 
@@ -510,14 +519,14 @@ int bouncing() {
         // engine.make_dirty();
         // md = engine.construct_mesh();
         
-        glBindVertexArray(VAO);
+        //glBindVertexArray(VAO);
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
+        //glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        //glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
 
         // Copy index data into EBO
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
+        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
  
         shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
             glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
@@ -543,6 +552,152 @@ int bouncing() {
     return EXIT_SUCCESS;
 }
 
+int cloud() {
+    const gtt::lalg::vec3 center = gtt::lalg::vec3(0.f);
+    const float side_length = 10.f;
+    const int32_t resolution = 30;
+    const float iso_value = 1.f;
+    const int32_t num_metaballs = 10;
+
+    gtt::MetaballEngine<gtt::Metaball<gtt::presets::KineticBlob>> engine(center, side_length, resolution, iso_value);
+    for (int i = 0; i < num_metaballs; i++) {
+        gtt::lalg::vec3 position = gtt::lalg::vec3::from(glm::linearRand(glm::vec3(-5.f), glm::vec3(5.f)));
+        gtt::lalg::vec3 velocity = gtt::lalg::vec3::from(glm::sphericalRand(1.f));
+        int idx = engine.add_metaball(gtt::Metaball(gtt::presets::KineticBlob(position, velocity)));
+        std::cout << "CENTER: " << to_string(position) << " : " << to_string(engine.get_metaball(idx).get_bounding_box()) << std::endl;
+    }
+
+    std::cout << "\n\nConstruct mesh" << std::endl;
+    std::vector<gtt::lalg::vec4> md = engine.construct_point_cloud();
+
+    // for (gtt::lalg::vec4 v : md) {
+    //     std::cout << to_string(v) << std::endl;
+    // }
+
+    const int SCREEN_WIDTH = 640;
+    const int SCREEN_HEIGHT = 480;
+    GLFWwindow* win = setup(SCREEN_WIDTH, SCREEN_HEIGHT, "Marching Cubes (Refactor) Test").open();
+
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    // glGenBuffers(1, &EBO);
+
+    // Bind Vertex Array Object first
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    // Copy vertex data into VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, md.size() * sizeof(gtt::lalg::vec4), md.data(), GL_STATIC_DRAW);
+
+    Shader shader = Shader::from_file(
+        "./src/shaders/vertex/point_cloud.vert",
+        "./src/shaders/fragment/point_cloud.frag"
+    ).value();
+
+    // shader.add_uniform("lightPos", [](GLuint pgrm, GLint loc) {
+    //     glUniform3fv(loc, 1, &glm::vec3(10.f, 10.f, 10.f)[0]);
+    // });
+
+    // shader.add_uniform("color", [](GLuint pgrm, GLint loc) {
+    //     glUniform3fv(loc, 1, &glm::vec3(1.f, 0.f, 0.f)[0]);
+    // });
+
+    // glm::vec3 camera_pos = camera.position;
+    // shader.add_uniform("camera_pos", [&camera_pos](GLuint pgrm, GLint loc) {
+    //     glUniform3fv(loc, 1, &camera_pos[0]);
+    // });
+
+    GLuint program = shader.get_program_id();
+    const GLint vpos_location = glGetAttribLocation(program, "pPos");
+    // const GLint vnorm_location = glGetAttribLocation(program, "pNorm");
+
+    // Position attribute
+    glVertexAttribPointer(vpos_location, 4, GL_FLOAT, GL_FALSE, sizeof(gtt::lalg::vec4), (void*)0);
+    glEnableVertexAttribArray(vpos_location);
+    
+    // // glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    // glVertexAttribPointer(vpos_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+    // glEnableVertexAttribArray(vpos_location);
+
+    // glVertexAttribPointer(vnorm_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
+    // glEnableVertexAttribArray(vnorm_location);
+
+    glm::mat4 proj = glm::perspective(
+        glm::radians(45.f),
+        (float) SCREEN_WIDTH / SCREEN_HEIGHT,
+        0.1f,
+        100.f
+    );
+
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.f, 0.f, 0.f, 1.0f);
+    glPointSize(2);
+
+    const float FPS = 1.f / 30.f;
+    float lastFrame = 0.f;
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+    std::cout << "Render loop" << std::endl;
+    while (!glfwWindowShouldClose(win)) {
+        float currentFrame = (float) glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        process_input(win, deltaTime);
+
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glm::mat4 view = camera.get_view();
+        glm::mat4 mvp = proj * view;
+
+        // for (int i = 0; i < num_metaballs; i++) {
+        //     gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+        //     gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
+
+        //     for (int i = 0; i < 3; i++) {
+        //         if (kb_pos[i] < -5.f + 1.0f) {
+        //             kb_pos[i] = -4.0f;
+        //             kb.m_velocity[i] *= -1;
+        //         } else if (kb_pos[i] > 5.f - 1.0f) {
+        //             kb_pos[i] = 4.0f;
+        //             kb.m_velocity[i] *= -1;
+        //         }
+        //     }
+        // }
+        
+        // engine.make_dirty();
+        // md = engine.construct_mesh();
+        
+        glBindVertexArray(VAO);
+
+        // glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // glBufferData(GL_ARRAY_BUFFER, md.size() * sizeof(gtt::lalg::vec4), md.data(), GL_STATIC_DRAW);
+ 
+        shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
+            glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
+        });
+
+        shader.ping_all_uniforms().use();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINTS, 0, md.size());
+        // glDrawElements(GL_TRIANGLES, (GLsizei) md.indices.size(), GL_UNSIGNED_INT, 0);
+        // glDrawElements(GL_TRIANGLES, (GLsizei) indices.size(), GL_UNSIGNED_INT, 0);
+        
+        glfwPollEvents();
+        glfwSwapBuffers(win);
+    }
+    
+    glfwDestroyWindow(win);
+    glfwTerminate();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[]) {
     int (*scenario)() = nullptr;
     for (int i = 1; i < argc; i++) {
@@ -556,6 +711,8 @@ int main(int argc, char* argv[]) {
             scenario = help;
         } else if (arg == "-bouncing" || arg == "-b") {
             scenario = bouncing;
+        } else if (arg == "-cloud" || arg == "-c") {
+            scenario = cloud;
         }
     }
 
