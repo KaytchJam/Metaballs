@@ -12,23 +12,36 @@ namespace gtt {
         return *this;
     }
 
-    inline AABBNode* AABBTree::left(AABBNode* n) {
-        return &nodes[n->left];
-    }
+    inline AABBNode* AABBTree::unuclear(AABBNode* n, int32_t AABBNode::* member) { return &nodes[n->*member]; }
+    inline const AABBNode* AABBTree::unuclear(const AABBNode* n, int32_t AABBNode::* member) const { return &nodes[n->*member]; }
+    inline AABBNode* AABBTree::nuclear(AABBNode* n, int32_t AABBNode::* member) { return n == nullptr || n->*member == -1 ? nullptr : &nodes[n->*member]; }
+    inline const AABBNode* AABBTree::nuclear(const AABBNode* n, int32_t AABBNode::* member) const { return n == nullptr || n->*member == -1 ? nullptr : &nodes[n->*member]; }
 
-    inline AABBNode* AABBTree::right(AABBNode* n) {
-        return &nodes[n->right];
-    }
+    inline AABBNode* AABBTree::uleft(AABBNode* n) { return unuclear(n, &AABBNode::left); }
+    inline const AABBNode* AABBTree::uleft(const AABBNode* n) const { return unuclear(n, &AABBNode::left); }
+    inline AABBNode* AABBTree::left(AABBNode* n) { return nuclear(n, &AABBNode::left); }
+    inline const AABBNode* AABBTree::left(const AABBNode* n) const { return nuclear(n, &AABBNode::left); }
 
-    inline AABBNode* AABBTree::parent(AABBNode* n) {
-        return &nodes[n->parent];
-    }
+    inline AABBNode* AABBTree::uright(AABBNode* n) { return unuclear(n, &AABBNode::right); }
+    inline const AABBNode* AABBTree::uright(const AABBNode* n) const { return unuclear(n, &AABBNode::right); }
+    inline AABBNode* AABBTree::right(AABBNode* n) { return nuclear(n, &AABBNode::right); }
+    inline const AABBNode* AABBTree::right(const AABBNode* n) const { return nuclear(n, &AABBNode::right); }
+
+    inline AABBNode* AABBTree::uparent(AABBNode* n) { return unuclear(n, &AABBNode::parent); }
+    inline const AABBNode* AABBTree::uparent(const AABBNode* n) const { return unuclear(n, &AABBNode::parent); }
+    inline AABBNode* AABBTree::parent(AABBNode* n) { return nuclear(n, &AABBNode::parent); }
+    inline const AABBNode* AABBTree::parent(const AABBNode* n) const { return nuclear(n, &AABBNode::parent); }
 
     inline AABBNode* AABBTree::sibling(AABBNode* n) {
-        AABBNode* p = parent(n);
-        const int32_t n_idx = left(p) == n ? p->left : p->right;
-        const int32_t sibling_idx = p->children[1 - n_idx];
-        return sibling_idx == -1 ? nullptr : &nodes[sibling_idx];
+        if (n == nullptr || n->is_leaf()) { return  nullptr; }
+        const AABBNode* p = uparent(n);
+        return &nodes[p->children[1 - (uleft(p) == n ? p->left : p->right)]];
+    }
+
+    inline const AABBNode* AABBTree::sibling(const AABBNode* n) const {
+        if (n == nullptr || n->is_leaf()) { return  nullptr; }
+        const AABBNode* p = uparent(n);
+        return &nodes[p->children[1 - (uleft(p) == n ? p->left : p->right)]];
     }
 
     size_t AABBTree::count_leaves() const {
@@ -44,7 +57,7 @@ namespace gtt {
             AABBNode* n = &nodes[from_idx];
 
             if (!n->is_leaf()) {
-                n->bb = join(left(n)->bb, right(n)->bb);
+                n->bb = join(uleft(n)->bb, uright(n)->bb);
             }
 
             from_idx = n->parent;
@@ -67,12 +80,12 @@ namespace gtt {
                 float right_sa = INF;
 
                 if (swap_node->left != -1) {
-                    const AABBNode* sn_left = left(swap_node);
+                    const AABBNode* sn_left = uleft(swap_node);
                     left_sa = join(bb, sn_left->bb).surface_area() - sn_left->bb.surface_area();
                 }
 
                 if (swap_node->right != -1) {
-                    const AABBNode* sn_right = right(swap_node);
+                    const AABBNode* sn_right = uright(swap_node);
                     right_sa = join(bb, sn_right->bb).surface_area() - sn_right->bb.surface_area();
                 }
 
@@ -90,7 +103,7 @@ namespace gtt {
             if (node_idx == root) {
                 root = empty_idx;
             } else {
-                AABBNode* parent_node = parent(swap_node);
+                AABBNode* parent_node = uparent(swap_node);
                 parent_node->children[parent_node->right == node_idx] = empty_idx;
             }
             
