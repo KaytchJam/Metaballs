@@ -1,4 +1,3 @@
-
 #include <fieldrange.hpp>
 
 // HELPER ALIASES

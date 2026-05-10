@@ -1,4 +1,3 @@
-
 #include <intrange.hpp>
 
 // IntRange definitions

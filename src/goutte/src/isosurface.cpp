@@ -1,4 +1,3 @@
-
 #include <isosurface.hpp>
 
 using namespace gtt;
