@@ -27,7 +27,6 @@ namespace gtt {
     }
 
     FieldRange bbox_to_field(const IsoSurface& surface, const BoundingBox& bb) {
-        std::cout << gtt::to_string(bb) << std::endl;
         const int32_t max_index = surface.shape()[0] - 1;
         const gtt::lalg::ivec3 start = clamp(lalg::ivec3(floor(surface.position_to_index(bb.min_point))), 0, max_index);
         const gtt::lalg::ivec3 end = clamp(lalg::ivec3(ceil(surface.position_to_index(bb.max_point))), 0, max_index);
@@ -224,7 +223,7 @@ namespace gtt {
                     const int32_t mball_b = tree_local.nodes[b].data_index;
 
                     // the AABB Bounding Boxes overlap, but do the ACTUAL bounds overlap themselves?
-                    if (overlap(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
+                    if (overlapping(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
                         joiner_local.unite(mball_a, mball_b);
                     }
                 });
@@ -238,11 +237,12 @@ namespace gtt {
             );
         }
 
-        /** Get the metaball in this Metaball Engine at index i */
+        /** Get the metaball in this Metaball Engine at integer index i. */
         M& get_metaball(const size_t i) {
             return *balls[i];
         }
 
+        /** Get the metaball in this Metaball Engine at integer index i. */
         const M& get_metaball(const size_t i) const {
             return *balls[i];
         }
