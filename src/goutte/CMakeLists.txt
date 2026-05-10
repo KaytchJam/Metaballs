@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(goutte STATIC)
 
-target_sources(goutte PRIVATE src/fieldrange.cpp src/intrange.cpp src/isosurface.cpp src/marcher.cpp src/dsa/unionfind.cpp)
+target_sources(goutte PRIVATE src/fieldrange.cpp src/intrange.cpp src/isosurface.cpp src/marcher.cpp src/dsa/unionfind.cpp src/boundingbox.cpp src/aabb_tree.cpp)
 
 target_include_directories(goutte PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
