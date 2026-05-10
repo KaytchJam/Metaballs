@@ -95,7 +95,7 @@ const std::vector<int32_t>& UnionFind::get_parents() const {
 }
 
 UnionFind& UnionFind::isolate(const uf_index_t a) {
-    const int32_t N = num_nodes();
+    const int32_t N = (int32_t) num_nodes();
     for (int32_t i = 0; i < N; i++) {
         if (parents[i] == a) {
             parents[i] = parents[a];
