@@ -10,6 +10,9 @@ struct BoundingBox {
     gtt::lalg::vec3 max_point = gtt::lalg::vec3(0);
     gtt::lalg::vec3 min_point = gtt::lalg::vec3(0);
 
+    constexpr BoundingBox() {}
+    constexpr BoundingBox(gtt::lalg::vec3 min_pt, gtt::lalg::vec3 max_pt) : max_point(max_pt), min_point(min_pt) {}
+
     BoundingBox& intersection_mut(const BoundingBox& outer);
 
     BoundingBox& join_mut(const BoundingBox& other);
