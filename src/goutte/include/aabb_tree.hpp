@@ -29,6 +29,21 @@ namespace gtt {
         inline AABBNode& update_links(int32_t parent, int32_t left, int32_t right);
     };
 
+    struct SwapRecord {
+        int32_t former = -1;
+        int32_t current = -1;
+        SwapRecord(const int32_t prev = -1, const int32_t foll = -1) : former(prev), current(foll) {}
+    };
+
+    /** Stores the old and new indices of nodes that are moved around
+     * during AABBTree::remove. `count` indicates the maximum number
+     * of nodes moved. At most 3 nodes in the tree can be moved around
+     * due to `remove`. Indices `[0, count)` are to be checked. */
+    struct SwapBus {
+        SwapRecord records[3];
+        int32_t count = 0;
+    };
+
     struct AABBTree {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
@@ -36,8 +51,10 @@ namespace gtt {
         /** Insert some data into the AABB Tree, where the data is associated with
         * `BoundingBox` bb. The index of the inserted data is returned. */
         int32_t insert(int32_t data_index, const BoundingBox& bb);
+        SwapBus remove(const int32_t idx);
 
-        int32_t find_swap_node(int32_t swap_idx, const BoundingBox& bb);
+        template <std::input_iterator Iter>
+        std::pair<int32_t,int32_t> insert_all(Iter low, Iter high);
 
         /** Iteratively travel up the tree, starting from the `AABBNode` at index from_idx,
         * and make its bounding box the result of joining the bounding boxes of its left
@@ -47,33 +64,11 @@ namespace gtt {
         /** Count the number of leaves in this `AABBTree`. */
         size_t count_leaves() const;
 
-        inline AABBNode* nuclear(AABBNode* n, int32_t AABBNode::* member);
-        inline const AABBNode* nuclear(const AABBNode* n, int32_t AABBNode::* member) const;
-        inline AABBNode* unuclear(AABBNode* n, int32_t AABBNode::* member);
-        inline const AABBNode* unuclear(const AABBNode* n, int32_t AABBNode::* member) const;
+        /** Find all simultaneous  */
+        template <std::invocable<int32_t,int32_t> F>
+        void all_overlaps(F&& on_overlap);
 
-        inline AABBNode* left(AABBNode* n);                         // Given a pointer to `node n`, return a pointer to the left child node of `n`, and nullptr if either (n == nullptr) or (n->left == -1).
-        inline const AABBNode* left(const AABBNode* n) const;       // Given a pointer to `node n`, return a pointer to the left child node of `n`, and nullptr if either (n == nullptr) or (n->left == -1).
-        inline AABBNode* uleft(AABBNode* n);                        // "unchecked" left. Return a pointer to `node n`'s left child.
-        inline const AABBNode* uleft(const AABBNode* n) const;      // "unchecked" left. Return a pointer to `node n`'s left child.
-
-        inline AABBNode* right(AABBNode* n);                        // Given a pointer to `node n`, return a pointer to the right child node of `n`, and nullptr if either (n == nullptr) or (n->right == -1).
-        inline const AABBNode* right(const AABBNode* n) const;      // Given a pointer to `node n`, return a pointer to the right child node of `n`, and nullptr if either (n == nullptr) or (n->right == -1).
-        inline AABBNode* uright(AABBNode* n);                       // "unchecked" right. Return a pointer to `node n`'s right child.
-        inline const AABBNode* uright(const AABBNode* n) const;     // "unchecked" right. Return a pointer to `node n`'s right child.
-
-        inline AABBNode* parent(AABBNode* n);                       // Given a pointer to `node n`, return a pointer to the parent node of `n`, and nullptr if either (n == nullptr) or (n->parent == -1).
-        inline const AABBNode* parent(const AABBNode* n) const;     // Given a pointer to `node n`, return a pointer to the parent node of `n`, and nullptr if either (n == nullptr) or (n->parent == -1).
-        inline AABBNode* uparent(AABBNode* n);                      // "unchecked" parent. Return a pointer to `node n`'s parent.
-        inline const AABBNode* uparent(const AABBNode* n) const;    // "unchecked" parent. Return a pointer to `node n`'s parent.
-     
-        inline AABBNode* sibling(AABBNode* n);                      // Returns a pointer to the 'sibling' node of input node pointer `n`. `nullptr` returned if no such sibling exists.
-        inline const AABBNode* sibling(const AABBNode* n) const;    // Returns a pointer to the 'sibling' node of input node pointer `n`. `nullptr` returned if no such sibling exists.
-
-        template <typename F>
-        void all_overlaps(F&& overlap_callback);
-
-        enum OverlapLeafState {
+        enum class OverlapLeafState {
             FIRST_IS_LEAF = 0,
             SECOND_IS_LEAF = 1,
             BOTH_IS_LEAF = 2,
@@ -86,8 +81,8 @@ namespace gtt {
         OverlapLeafState get_overlap_leaf_state(const AABBNode& a, const AABBNode& b) const;
     };
 
-    template <typename F>
-    void AABBTree::all_overlaps(F&& overlap_callback) {
+    template <std::invocable<int32_t,int32_t> F>
+    void AABBTree::all_overlaps(F&& on_overlap) {
         using IndexPair = std::pair<int32_t,int32_t>;
         
         dsa::IndexedStack<IndexPair> node_stack;
@@ -96,13 +91,13 @@ namespace gtt {
         while (!node_stack.empty()) {
             // pop
             const IndexPair frame = node_stack.pop();
-            AABBNode* A = &nodes[frame.first];
-            AABBNode* B = &nodes[frame.second];
+            AABBNode* const A = &nodes[frame.first];
+            AABBNode* const B = &nodes[frame.second];
 
             switch(get_overlap_leaf_state(*A, *B)) {
                 // We found an overlap
                 case OverlapLeafState::BOTH_IS_LEAF:
-                    if (frame.first != frame.second) { overlap_callback(frame.first, frame.second); }
+                    if (frame.first != frame.second) { on_overlap(frame.first, frame.second); }
                     break;
 
                 // continue traversal along the second node, B
