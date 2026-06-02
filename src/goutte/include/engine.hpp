@@ -40,7 +40,7 @@ namespace gtt {
     };
 
     /** Engine for the construction of Metaballs */
-    template <typename M = AggregateMetaball>
+    template <ScalarField M = AggregateMetaball>
     class MetaballEngine {
         private:
             static_assert(std::is_base_of<DynamicMetaball, M>::value, "engine.hpp: MetaballEngine<M> -> M is not a type derived from DynamicMetaball.");
@@ -151,14 +151,14 @@ namespace gtt {
         {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}
     };
 
-    template <typename M>
+    template <ScalarField M>
     MetaballEngine<M>::MetaballEngine(const lalg::vec3& center, const float side_length, const int32_t resolution, const float iso_value)
         : field(IsoSurface::construct(center, side_length / 2.f, resolution)), 
           metaballs(field), 
           isovalue(iso_value),
           num_valid_points(0) {}
 
-    template <typename M>
+    template <ScalarField M>
     float MetaballEngine<M>::sum_metaballs(RenderGroup& rg, const float x, const float y, const float z) const {
         float acc = 0.f;
         for (const int32_t idx: rg.ball_indices) {
@@ -168,12 +168,12 @@ namespace gtt {
         return acc;
     }
 
-    template <typename M>
+    template <ScalarField M>
     float MetaballEngine<M>::sum_metaballs(RenderGroup& rg, const lalg::vec3& position) const {
         return sum_metaballs(rg, position.x, position.y, position.z);
     }
 
-    template <typename M>
+    template <ScalarField M>
     lalg::vec3 MetaballEngine<M>::compute_gradient(RenderGroup& rg, const lalg::vec3& p, const float eps) const {
         const lalg::vec3 dx = lalg::vec3(eps, 0, 0);
         const lalg::vec3 dy = lalg::vec3(0, eps, 0);
@@ -207,7 +207,7 @@ namespace gtt {
         );
     }
 
-    template <typename M>
+    template <ScalarField M>
     lalg::vec3 MetaballEngine<M>::compute_normal(RenderGroup& rg, const lalg::vec3& p, float eps) const {
         return -1 * lalg::unit(compute_gradient(rg, p));
     }
@@ -222,7 +222,7 @@ namespace gtt {
     //     return *this;
     // }
 
-    template <typename M>
+    template <ScalarField M>
     CubeBitsResult MetaballEngine<M>::compute_cube_bits(
         CubeView& cube_view, 
         CubeOrderedIsopoints& cube_isopoints
@@ -248,7 +248,7 @@ namespace gtt {
         };
     }
 
-    template <typename M>
+    template <ScalarField M>
     const LerpedEdgePoints& MetaballEngine<M>::lerp_cube_edges(
         uint16_t cube_edge_bits, 
         LerpedEdgePoints& cube_edge_points,
@@ -272,7 +272,7 @@ namespace gtt {
         return cube_edge_points;
     }
 
-    template <typename M>
+    template <ScalarField M>
     CubeTriData MetaballEngine<M>::build_cube_tris(
         RenderGroup& rg,
         const uint8_t cube_bits, 
@@ -295,7 +295,7 @@ namespace gtt {
             out_vertices[eoi + 2].normal = compute_normal(rg, out_vertices[eoi+2].position); 
 
             // Setting Index Data
-            int32_t index_at = eoi + (int32_t) mesh_data.indices.size();
+            const int32_t index_at = eoi + (int32_t) mesh_data.indices.size();
             out_indices[eoi] = index_at;
             out_indices[eoi + 1] = index_at + 1;
             out_indices[eoi + 2] = index_at + 2;
@@ -310,7 +310,7 @@ namespace gtt {
         };
     }
 
-    template <typename M>
+    template <ScalarField M>
     const std::vector<lalg::vec4> MetaballEngine<M>::construct_point_cloud() {
         std::vector<lalg::vec4> positions;
 
@@ -337,7 +337,7 @@ namespace gtt {
         return positions;
     }
 
-    template <typename M>
+    template <ScalarField M>
     const common::graphics::MeshData& MetaballEngine<M>::construct_mesh() {
         if (!is_dirty) {
             return mesh_data;
@@ -374,7 +374,6 @@ namespace gtt {
 
         // std::cout << "Initiate marching cube process" << std::endl;
         for (RenderGroup rg : metaballs.groups()) {
-
             for (CubeView cv : MarchingCubeRange(field, FieldRange(rg.fr))) {
                 const CubeBitsResult cbr = compute_cube_bits(cv, ordered_iso_points);
                 
