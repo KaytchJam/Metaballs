@@ -15,11 +15,13 @@ std::string to_string(const BoundingBox& bb) {
     return ss.str();
 }
 
+/** Just exists for this test. A char and an integer index */
 struct CharIdx {
     char c;
     int32_t i;
 };
 
+/** Print the tree with mapping information */
 void print_tree_with_mappings(const AABBTree& tree, CharIdx* mappings) {
     int32_t idx = 0;
     std::printf("ROOT = %d\n", tree.root);
@@ -37,6 +39,7 @@ void print_tree(const AABBTree& tree) {
     }
 }
 
+/** Remove a value in `mappings` and its corresponding node in the AABBTree. */
 bool remove_mapping(std::vector<CharIdx>& mappings, AABBTree& tree, const int32_t remove_idx) {
     if (remove_idx >= mappings.size()) {
         return false;
@@ -64,7 +67,7 @@ bool remove_mapping(std::vector<CharIdx>& mappings, AABBTree& tree, const int32_
 int main() {
     AABBTree tree;
     BoundingBox boxes[] = {
-        BoundingBox(vec3(-5,1, 0), vec3(-3, 5, 0)),
+        BoundingBox(vec3(-5, 1, 0), vec3(-3, 5, 0)),
         BoundingBox(vec3(1, -1, 0), vec3(2, 2, 0)),
         BoundingBox(vec3(3, -2, 0), vec3(4, 1, 0))
     };
@@ -77,12 +80,12 @@ int main() {
         idx += 1;
     }
 
+    // Initial Structure of AABB Tree
     print_tree_with_mappings(tree, mappings.data());
 
     int32_t removals = 0;
-    while (!mappings.empty()) {
+    while (remove_mapping(mappings, tree, 0)) {
         std::cout << "\nRemoval " << removals << std::endl;
-        remove_mapping(mappings, tree, 0);
         print_tree_with_mappings(tree, mappings.data());
         removals += 1;
     }
