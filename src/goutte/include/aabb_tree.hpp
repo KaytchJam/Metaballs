@@ -48,13 +48,16 @@ namespace gtt {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
 
+        AABBTree() {}
+        AABBTree(AABBTree&& other);
+
         /** Insert some data into the AABB Tree, where the data is associated with
         * `BoundingBox` bb. The index of the inserted data is returned. */
         int32_t insert(int32_t data_index, const BoundingBox& bb);
         SwapBus remove(const int32_t idx);
 
-        template <std::input_iterator Iter>
-        std::pair<int32_t,int32_t> insert_all(Iter low, Iter high);
+        // template <std::input_iterator Iter>
+        // std::pair<int32_t,int32_t> insert_all(Iter low, Iter high);
 
         /** Iteratively travel up the tree, starting from the `AABBNode` at index from_idx,
         * and make its bounding box the result of joining the bounding boxes of its left
