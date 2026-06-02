@@ -11,7 +11,7 @@ namespace gtt {
      * 
      * (2) That's all! */
     template <typename T>
-    struct IsScalarFunction
+    struct IsScalarField
         : std::conjunction<
               std::is_invocable<const T, float, float, float>,
               std::is_same<std::invoke_result_t<const T, float, float, float>, float>
@@ -36,18 +36,27 @@ namespace gtt {
     /** 
      * Requirements for being a BoundedScalarFunction
      * 
-     * (1) Satisfy `IsScalarFunction<T>` (try `static_assert(IsScalarFunction<YourType>::value)` to check)
+     * (1) Satisfy `IsScalarField<T>` (try `static_assert(IsScalarField<YourType>::value)` to check)
      * (2) Satisfy `HasBoundingBox<T>` (try `static_assert(HasBoundingBox<YourType>::value)` to check)
      */
     template <typename PBSF>
     struct IsBoundedScalarFunction 
         : std::conjunction<
-                IsScalarFunction<PBSF>,
+                IsScalarField<PBSF>,
                 HasBoundingBox<PBSF>
         > {};
 
     /** HELPER MACROS! QUICKLY CHECK IF YOUR METABALL TYPE IS VALID */
-    #define VALID_METABALL(T) IsScalarFunction<T>::value
-    #define HAS_BOUNDING_BOX(T) HasBoundingBox<T>::value
-    #define VALID_BOUNDED_METABALL(T) IsBoundedScalarFunction<T>::value
+    #define GTT_VALID_METABALL(T) IsScalarField<T>::value
+    #define GTT_HAS_BOUNDING_BOX(T) HasBoundingBox<T>::value
+    #define GTT_VALID_BOUNDED_METABALL(T) IsBoundedScalarFunction<T>::value
+
+    template <typename T>
+    concept Bounded = HasBoundingBox<T>::value;
+
+    template <typename T>
+    concept ScalarField = IsScalarField<T>::value;
+
+    template <typename T>
+    concept BoundedScalarField = Bounded<T> && ScalarField<T>;
 }

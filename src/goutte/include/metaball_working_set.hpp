@@ -33,28 +33,28 @@ namespace gtt {
         return FieldRange({start.x, end.x, start.y, end.y, start.z, end.z});
     };
 
-    /** Container for a set of Metaballs in the Metaball Engine. Has specializations
-     * such that it optimizes for when the metaball type has boudning boxes or not. */
-    template <typename M, bool B = VALID_BOUNDED_METABALL(M)>
-    struct MetaballWorkingSet {
-        using GroupRangeType = IntRange;
-        using RenderGroup = MetaballRenderGroup<GroupRangeType>;
-        using MetaballRenderGroupRange = dsa::wrap::PlaceboWrapper<RenderGroup>;
+    // template <typename M, bool B = GTT_VALID_BOUNDED_METABALL(M)>
+    // struct MetaballWorkingSet {
+    //     using GroupRangeType = MetaballWorkingSet<M, B>::GroupRangeType;
+    //     using RenderGroup = MetaballWorkingSet<M, B>::RenderGroup;
+    //     using MetaballRenderGroupRange = MetaballWorkingSet<M, B>::MetaballRenderGroupRange;
 
-        static constexpr bool has_bounding_box = false;
-
-        MetaballWorkingSet(IsoSurface& s);
-        ~MetaballWorkingSet();
-
-        size_t add_metaball(M&& m) = 0;
-        M& get_metaball(const size_t i);
-        const M& get_metaball(const size_t i) const;
-        MetaballRenderGroupRange groups() &;
-    };
+    //     static constexpr bool has_bounding_box = B;
     
-    /** Specialization for types `M` that don't satisfy `HasBoundingBox<M>`. */
-    template <typename M>
-    struct MetaballWorkingSet<M, false> {
+    //     MetaballWorkingSet(IsoSurface& s);
+    //     ~MetaballWorkingSet();
+    
+    //     size_t add_metaball(M&& m) = 0;
+    //     M& get_metaball(const size_t i);
+    //     const M& get_metaball(const size_t i) const;
+    //     MetaballRenderGroupRange groups() &;
+    // };
+    
+    /** Container for a set of Metaballs in the Metaball Engine. Has specializations
+     * such that it optimizes for when the metaball type has bounding boxes or not. 
+     * This variant is a specialization for types that lack a BoundingBox. */
+    template <ScalarField M>
+    struct MetaballWorkingSet {
         std::vector<dsa::wrap::PlaceboWrapper<M>> balls;
         const IsoSurface& surface;
         
@@ -94,8 +94,8 @@ namespace gtt {
     };
 
     /** Specialization for types `M` that satisfy `HasBoundingBox<M>`. */
-    template <typename M>
-    struct MetaballWorkingSet<M, true> {
+    template <typename M> requires BoundedScalarField<M>
+    struct MetaballWorkingSet<M> {
         std::vector<dsa::wrap::IndexWrapper<M>> balls;
         const IsoSurface& surface;
 
@@ -198,6 +198,7 @@ namespace gtt {
             iterator end() const { return iterator(accessor, (int32_t) accessor->size(), (int32_t) accessor->size()); }
         };
 
+        /** Add a metaball `M` to the MetaballWorkingSet. The index of the Metaball is returned. */
         size_t add_metaball(M&& m) {
             size_t index = balls.size();
             int32_t node_index = tree.insert((int32_t) index, m.get_bounding_box());
@@ -212,7 +213,7 @@ namespace gtt {
 
         MetaballRenderGroupRange groups() & {
             if (regenerate_groups) {
-                std::cout << "Re-fitting UnionFindCollector to UnionFind" << std::endl;
+                // std::cout << "Re-fitting UnionFindCollector to UnionFind" << std::endl;
 
                 BallContainer& balls_local = balls;
                 gtt::AABBTree& tree_local = tree;
