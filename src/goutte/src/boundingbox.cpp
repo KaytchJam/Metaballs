@@ -29,10 +29,10 @@ float BoundingBox::surface_area() const {
 
 namespace gtt {
     BoundingBox join(const BoundingBox& b1, const BoundingBox& b2) {
-        return BoundingBox {
-            max(b1.max_point, b2.max_point),
-            min(b1.min_point, b2.min_point)
-        };
+        return BoundingBox(
+            min(b1.min_point, b2.min_point),
+            max(b1.max_point, b2.max_point)
+        );
     }
 
     bool overlapping(const BoundingBox& a, const BoundingBox& b) {
@@ -45,10 +45,10 @@ namespace gtt {
 
     BoundingBox expand(const BoundingBox& b, const float constant) {
         const lalg::vec3 constant_vec(constant);
-        return BoundingBox {
-            b.max_point + constant_vec,
-            b.min_point - constant_vec
-        };
+        return BoundingBox(
+            b.min_point - constant_vec,
+            b.max_point + constant_vec
+        );
     }
 
     BoundingBox& expand_mut(BoundingBox& b, const float constant) {
