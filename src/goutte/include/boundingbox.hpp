@@ -7,8 +7,8 @@
 
 /** Simple representation of a 3D Bounding Box with a maximal point & a minimal point */
 struct BoundingBox {
-    gtt::lalg::vec3 max_point = gtt::lalg::vec3(0);
     gtt::lalg::vec3 min_point = gtt::lalg::vec3(0);
+    gtt::lalg::vec3 max_point = gtt::lalg::vec3(0);
 
     constexpr BoundingBox() {}
     constexpr BoundingBox(gtt::lalg::vec3 min_pt, gtt::lalg::vec3 max_pt) : max_point(max_pt), min_point(min_pt) {}
@@ -34,10 +34,10 @@ struct BoundingBox {
      * meaning... `join(a, empty()) = a`.
      *  */
     static constexpr BoundingBox empty() {
-        return BoundingBox {
-            -std::numeric_limits<float>::infinity(),
-            std::numeric_limits<float>::infinity()
-        };
+        return BoundingBox(
+            std::numeric_limits<float>::infinity(),
+            -std::numeric_limits<float>::infinity()
+        );
     }
 
     /** Returns a 'universal' `BoundingBox`, where its min point
@@ -49,10 +49,10 @@ struct BoundingBox {
      * meaning... `join(a, universal()) = universal()`.
      */
     static constexpr BoundingBox universal() {
-        return BoundingBox {
-            std::numeric_limits<float>::infinity(),
-            -std::numeric_limits<float>::infinity()
-        };
+        return BoundingBox (
+            -std::numeric_limits<float>::infinity(),
+            std::numeric_limits<float>::infinity()
+        );
     }
 };
 
