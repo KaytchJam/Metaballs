@@ -531,7 +531,7 @@ int main() {
         }
 
         std::cout << "\n=================================" << std::endl;
-        std::cout << "Executing test 'naive_" << (test_index + 1) << "'!\n" << std::endl;
+        std::cout << "Executing test 'naive_" << (test_num) << "'!\n" << std::endl;
         const int result = tests[test_num - 1]();
         std::cout << "Test ended with status = " << result << std::endl;
         std::cout << "\n=================================" << std::endl;
