@@ -14,9 +14,7 @@ struct BoundingBox {
     constexpr BoundingBox(gtt::lalg::vec3 min_pt, gtt::lalg::vec3 max_pt) : max_point(max_pt), min_point(min_pt) {}
 
     BoundingBox& intersection_mut(const BoundingBox& outer);
-
     BoundingBox& join_mut(const BoundingBox& other);
-
     constexpr gtt::lalg::vec3 get_center() const;
 
     /** Calculate the volume of the Bounding box. */
@@ -57,15 +55,11 @@ struct BoundingBox {
 };
 
 namespace gtt {
+    bool contains(const BoundingBox& a, const BoundingBox& b);
     BoundingBox join(const BoundingBox& b1, const BoundingBox& b2);
-
     bool overlapping(const BoundingBox& a, const BoundingBox& b);
-
     BoundingBox expand(const BoundingBox& b, const float constant);
-
     BoundingBox& expand_mut(BoundingBox& b, const float constant);
-
     BoundingBox scale(const BoundingBox& b, const float scalar);
-
     BoundingBox& scale_mut(BoundingBox& b, const float scalar);
 }
