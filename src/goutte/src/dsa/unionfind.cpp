@@ -15,6 +15,12 @@ UnionFind::UnionFind(size_t n) : parents(n), sizes(n,1), stack() {
 
 UnionFind::~UnionFind() {}
 
+UnionFind& UnionFind::pop_unsafe() {
+    parents.pop_back();
+    sizes.pop_back();
+    return *this;
+}
+
 UnionFind::uf_index_t UnionFind::find_mut(const uf_index_t x) {
     uf_index_t top_parent = parents[x];
     stack.push(StackFrame(false, x));
@@ -75,10 +81,30 @@ UnionFind& UnionFind::add_vertex() {
     return *this;
 }
 
+UnionFind& UnionFind::reset_remove() {
+    reset();
+    parents.pop_back();
+    sizes.pop_back();
+    return *this;
+}
+
+UnionFind& UnionFind::remove_vertex(const uf_index_t x) {
+    const int32_t end_idx = (int32_t) parents.size() - 1;
+    isolate(x).update(end_idx, x);
+
+    std::swap(parents[x], parents[end_idx]);
+    std::swap(sizes[x], sizes[end_idx]);
+
+    parents.pop_back();
+    sizes.pop_back();
+
+    return *this;
+}
+
 UnionFind& UnionFind::reset() {
     const size_t N = parents.size();
     for (int i = 0; i < N; i++) { parents[i] = i; }
-    std::memset(sizes.data(), 0, parents.size());
+    std::memset(sizes.data(), 1, parents.size());
     return *this;
 }
 
@@ -94,12 +120,32 @@ const std::vector<int32_t>& UnionFind::get_parents() const {
     return parents;
 }
 
+UnionFind& UnionFind::update(const uf_index_t a, const uf_index_t b) {
+    const int32_t N = (int32_t) num_nodes();
+    for (int32_t i = 0; i < N; i++) {
+        if (parents[i] == a) {
+            parents[i] = b;
+        }
+    }
+
+    parents[a] = b;
+    return *this;
+}
+
 UnionFind& UnionFind::isolate(const uf_index_t a) {
     const int32_t N = (int32_t) num_nodes();
     for (int32_t i = 0; i < N; i++) {
         if (parents[i] == a) {
             parents[i] = parents[a];
         }
+    }
+
+    /** Travel upwards, reduce sizes */
+    sizes[a] = 1;
+    uf_index_t p = parents[a];
+    while (p != parents[p]) {
+        sizes[p] -= 1;
+        p = parents[p];
     }
 
     parents[a] = a;
