@@ -50,10 +50,10 @@ int main() {
     for (int i = 0; i < NUM_FRAMES; i++) {
         
         auto curr_time = std::chrono::steady_clock::now();
-        std::chrono::duration<double> deltaTime = curr_time - prev_time;
+        std::chrono::duration<double> delta_time = curr_time - prev_time;
         prev_time = curr_time;
         
-        float dt = (float) deltaTime.count();
+        const float dt = (float) delta_time.count();
         time[i] = dt;
 
         for (int i = 0; i < num_metaballs; i++) {

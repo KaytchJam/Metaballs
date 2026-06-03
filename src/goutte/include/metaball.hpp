@@ -59,7 +59,7 @@ namespace gtt {
     };
 
     template <typename T>
-    class Metaball<T, std::enable_if_t<HasBoundingBox<T>::value>> : public MetaballExpression<Metaball<T>> {
+    class Metaball<T, std::enable_if_t<GTT_HAS_BOUNDING_BOX(T)>> : public MetaballExpression<Metaball<T>> {
     private:
         T m_scalar_func;
     public:
@@ -113,7 +113,7 @@ namespace gtt {
     public:
         template <typename T>
         explicit AggregateMetaball(T func) : m_scalar_func(std::move(func)) {
-            static_assert(gtt::IsScalarFunction<T>::value, "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
+            static_assert(GTT_VALID_METABALL(T), "gtt::AggregateMetaball, Type T does not implement operator()(float x, float y, float z) const -> float");
         }
     
         template <typename Derived>

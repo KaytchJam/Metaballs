@@ -138,6 +138,72 @@ namespace gtt {
                 }
             };
 
+            template <typename T>
+            struct vec<T,4> {
+                union {
+                    T data[4];
+                    struct { T x, y, z, w; };
+                };
+
+                using value_type = T;
+                static constexpr size_t size = 4;
+
+                constexpr T& operator[](size_t i)       { return data[i]; }
+                constexpr const T& operator[](size_t i) const { return data[i]; }
+
+                constexpr vec() : x(),y(),z(),w() {}
+                constexpr vec(T a,T b,T c,T d) : x(a),y(b),z(c),w(d) {}
+                constexpr vec(const T& t) : x(t), y(t), z(t), w(t) {}
+
+                template<VecLike Expr>
+                constexpr vec(const Expr& e) : x((T)e[0]), y((T)e[1]), z((T)e[2]), w((T)e[3]) {}
+
+                template <VecLike Expr>
+                constexpr vec& operator+=(const Expr& rhs) {
+                    static_assert(VecSize<Expr> == size);
+                    x += rhs[0];
+                    y += rhs[1];
+                    z += rhs[2];
+                    w += rhs[3];
+                    return *this;
+                }
+
+                template <VecLike Expr>
+                constexpr vec& operator-=(const Expr& rhs) {
+                    static_assert(VecSize<Expr> == size);
+                    x -= rhs[0];
+                    y -= rhs[1];
+                    z -= rhs[2];
+                    w -= rhs[3];
+                    return *this;
+                }
+
+                constexpr vec& operator*=(const T scalar) {
+                    x *= scalar;
+                    y *= scalar;
+                    z *= scalar;
+                    w *= scalar;
+                    return *this;
+                }
+
+                constexpr vec& operator/=(const T scalar) {
+                    x /= scalar;
+                    y /= scalar;
+                    z /= scalar;
+                    w /= scalar;
+                    return *this;
+                }
+
+                template <typename Expr>
+                constexpr static vec<T,size> from(const Expr& other) {
+                    vec<T,size> out;
+                    for (int i=0;i<size;i++) {
+                        out[i] = other[i];
+                    }
+                    return out;
+                }
+            };
+
             template<typename T,size_t N>
             struct VecTraits<vec<T,N>> {
                 using value_type = T;
@@ -480,6 +546,10 @@ namespace gtt {
             using vec3 = vec<float,3>;
             using ivec3 = vec<int32_t,3>;
             using dvec3 = vec<double,3>;
+
+            using vec4 = vec<float,4>;
+            using ivec4 = vec<int32_t,4>;
+            using dvec4 = vec<double,4>;
         }
     }
 

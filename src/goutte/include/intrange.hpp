@@ -25,7 +25,7 @@ public:
         using reference = value_type; 
         using pointer = void;
         using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
+        using iterator_category = std::forward_iterator_tag;
 
         int32_t m_at;
         const int32_t m_high;

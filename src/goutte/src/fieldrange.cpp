@@ -1,4 +1,3 @@
-
 #include <fieldrange.hpp>
 
 // HELPER ALIASES
@@ -41,6 +40,7 @@ FieldRange::FieldRange(const IRangeArr<3>& p_bounds) : m_bounds(p_bounds) {}
 FieldRange::FieldRange(const std::array<int,6>& p_bounds) : m_bounds(arr_to_range<6>(p_bounds)) {}
 FieldRange::FieldRange(int p_low, int p_high) : m_bounds(duplicate_range<3>(IntRange(p_low, p_high))) {}
 FieldRange::FieldRange(const IntRange& p_ir) : m_bounds(duplicate_range<3>(p_ir)) {}
+FieldRange::FieldRange(const IndexDim& low, const IndexDim& high) : m_bounds({IntRange(low.x, high.x), IntRange(low.y, high.y), IntRange(low.z, high.z)}) {}
 
 FRIter FieldRange::begin() const { return FieldRangeIterator(m_bounds); }
 FRIter FieldRange::end() const { return FieldRangeIterator(m_bounds, IndexDim(m_bounds[0].low(), m_bounds[1].low(), m_bounds[2].high())); }

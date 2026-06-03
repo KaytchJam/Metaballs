@@ -97,7 +97,7 @@ namespace gtt {
         IndexDim shape() const;
 
         /** Given a position, maps said point to a floating-point index  */
-        lalg::vec3 position_to_index(const lalg::vec3& position) {
+        lalg::vec3 position_to_index(const lalg::vec3& position) const {
             const gtt::lalg::ivec3 m = shape() / 2;
             return (position - m_center_position) * (m.x  / m_side_length) + m;
         }

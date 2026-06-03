@@ -1,4 +1,3 @@
-
 #include <isosurface.hpp>
 
 using namespace gtt;
@@ -36,10 +35,19 @@ const IndexDim& IndexCompactor::dimensions() const {
 
 // ISOSURFACE FUNCTIONS & HELPERS
 
-uint32_t pow_int(const uint32_t base, const uint32_t exp) {
+/** Log(n) power function */
+int32_t pow_int(int32_t base, uint32_t exp) {
+    if (exp == 1) return 1;
     if (base == 0 || base == 1) return base;
-    uint32_t acc = 1;
-    for (uint32_t j = 0; j < exp; j++) { acc *= base; }
+    int32_t acc = 1;
+    while (exp > 0) {
+        if (exp & 0x1) {
+            acc *= base;
+        }
+        base *= base;
+        exp >>= 1;
+    }
+    
     return acc;
 }
 
@@ -107,12 +115,12 @@ const IsoPoint& IsoSurface::get(uint32_t i) const {
 }
 
 IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) {
-    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    const uint32_t index = i + j * (m_partitions + 1) + k * (m_partitions + 1) * (m_partitions + 1);
     return get(index);
 }
 
 const IsoPoint& IsoSurface::get(uint32_t i, uint32_t j, uint32_t k) const {
-    const uint32_t index = i + j * m_partitions + k * m_partitions * m_partitions;
+    const uint32_t index = i + j * (m_partitions + 1) + k * (m_partitions + 1) * (m_partitions + 1);
     return get(index);
 }
 
