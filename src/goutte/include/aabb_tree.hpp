@@ -68,7 +68,7 @@ namespace gtt {
         size_t count_leaves() const;
 
         /** Find all simultaneous  */
-        template <typename F>
+        template <std::invocable<int32_t,int32_t> F>
         void all_overlaps(F&& on_overlap);
 
         enum class OverlapLeafState {
@@ -84,7 +84,7 @@ namespace gtt {
         OverlapLeafState get_overlap_leaf_state(const AABBNode& a, const AABBNode& b) const;
     };
 
-    template <typename F>
+    template <std::invocable<int32_t,int32_t> F>
     void AABBTree::all_overlaps(F&& on_overlap) {
         if (nodes.size() == 0) return;
 
