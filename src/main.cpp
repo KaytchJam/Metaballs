@@ -501,32 +501,34 @@ int bouncing() {
         glm::mat4 view = camera.get_view();
         glm::mat4 mvp = proj * view;
 
-        // for (int i = 0; i < num_metaballs; i++) {
-        //     gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
-        //     gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
+        for (int i = 0; i < num_metaballs; i++) {
+            gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+            gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
 
-        //     for (int i = 0; i < 3; i++) {
-        //         if (kb_pos[i] < -5.f + 1.0f) {
-        //             kb_pos[i] = -4.0f;
-        //             kb.m_velocity[i] *= -1;
-        //         } else if (kb_pos[i] > 5.f - 1.0f) {
-        //             kb_pos[i] = 4.0f;
-        //             kb.m_velocity[i] *= -1;
-        //         }
-        //     }
-        // }
-        
-        // engine.make_dirty();
-        // md = engine.construct_mesh();
-        
-        //glBindVertexArray(VAO);
+            for (int i = 0; i < 3; i++) {
+                if (kb_pos[i] < -5.f + 1.0f) {
+                    kb_pos[i] = -4.0f;
+                    kb.m_velocity[i] *= -1;
+                } else if (kb_pos[i] > 5.f - 1.0f) {
+                    kb_pos[i] = 4.0f;
+                    kb.m_velocity[i] *= -1;
+                }
+            }
 
-        //glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        //glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
+            engine.update_metaball((size_t) i);
+        }
+        
+        engine.make_dirty();
+        md = engine.construct_mesh();
+        
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, md.vertices.size() * sizeof(Vertex), md.vertices.data(), GL_STATIC_DRAW);
 
         // Copy index data into EBO
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, md.indices.size() * sizeof(int), md.indices.data(), GL_STATIC_DRAW);
  
         shader.add_uniform("MVP", [mvp](GLuint prog, GLint loc) { 
             glUniformMatrix4fv(loc, 1, false, glm::value_ptr(mvp)); 
@@ -566,9 +568,11 @@ int cloud() {
         int idx = engine.add_metaball(gtt::Metaball(gtt::presets::KineticBlob(position, velocity)));
         std::cout << "CENTER: " << to_string(position) << " : " << to_string(engine.get_metaball(idx).get_bounding_box()) << std::endl;
     }
+    
 
     std::cout << "\n\nConstruct mesh" << std::endl;
-    std::vector<gtt::lalg::vec4> md = engine.construct_point_cloud();
+    std::vector<gtt::lalg::vec4> md;
+    engine.construct_point_cloud(md);
 
     // for (gtt::lalg::vec4 v : md) {
     //     std::cout << to_string(v) << std::endl;
@@ -655,26 +659,32 @@ int cloud() {
         glm::mat4 view = camera.get_view();
         glm::mat4 mvp = proj * view;
 
-        // for (int i = 0; i < num_metaballs; i++) {
-        //     gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
-        //     gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
+        for (int i = 0; i < num_metaballs; i++) {
+            gtt::presets::KineticBlob& kb = engine.get_metaball((size_t) i).unwrap();
+            gtt::lalg::vec3& kb_pos = kb.update(deltaTime);
 
-        //     for (int i = 0; i < 3; i++) {
-        //         if (kb_pos[i] < -5.f + 1.0f) {
-        //             kb_pos[i] = -4.0f;
-        //             kb.m_velocity[i] *= -1;
-        //         } else if (kb_pos[i] > 5.f - 1.0f) {
-        //             kb_pos[i] = 4.0f;
-        //             kb.m_velocity[i] *= -1;
-        //         }
-        //     }
-        // }
+            
+            for (int i = 0; i < 3; i++) {
+                if (kb_pos[i] < -5.f + 1.0f) {
+                    kb_pos[i] = -4.0f;
+                    kb.m_velocity[i] *= -1;
+                } else if (kb_pos[i] > 5.f - 1.0f) {
+                    kb_pos[i] = 4.0f;
+                    kb.m_velocity[i] *= -1;
+                }
+            }
+            
+            // std::printf("IDX = %d = (%f,%f,%f)\n", i, kb_pos.x, kb_pos.y, kb_pos.z);
+            engine.update_metaball((size_t) i);
+        }
         
-        // engine.make_dirty();
-        // md = engine.construct_mesh();
+        engine.make_dirty();
+        md.clear();
+        engine.construct_point_cloud(md);
+        
         
         glBindVertexArray(VAO);
-
+        glBufferData(GL_ARRAY_BUFFER, md.size() * sizeof(gtt::lalg::vec4), md.data(), GL_STATIC_DRAW);
         // glBindBuffer(GL_ARRAY_BUFFER, VBO);
         // glBufferData(GL_ARRAY_BUFFER, md.size() * sizeof(gtt::lalg::vec4), md.data(), GL_STATIC_DRAW);
  
