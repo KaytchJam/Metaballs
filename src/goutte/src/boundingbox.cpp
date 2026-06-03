@@ -28,6 +28,14 @@ float BoundingBox::surface_area() const {
 }
 
 namespace gtt {
+    bool contains(const BoundingBox& a, const BoundingBox& b) {
+        return (
+            (a.max_point.x <= b.min_point.x) && (b.max_point.x <= a.max_point.x) &&
+            (a.max_point.y <= b.min_point.y) && (b.max_point.y <= b.max_point.y) &&
+            (a.max_point.z <= b.min_point.z) && (b.max_point.z <= b.max_point.z)
+        );
+    }
+
     BoundingBox join(const BoundingBox& b1, const BoundingBox& b2) {
         return BoundingBox(
             min(b1.min_point, b2.min_point),
