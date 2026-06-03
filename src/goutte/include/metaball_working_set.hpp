@@ -32,23 +32,6 @@ namespace gtt {
         const gtt::lalg::ivec3 end = clamp(lalg::ivec3(ceil(surface.position_to_index(bb.max_point))), 0, max_index);
         return FieldRange({start.x, end.x, start.y, end.y, start.z, end.z});
     };
-
-    // template <typename M, bool B = GTT_VALID_BOUNDED_METABALL(M)>
-    // struct MetaballWorkingSet {
-    //     using GroupRangeType = MetaballWorkingSet<M, B>::GroupRangeType;
-    //     using RenderGroup = MetaballWorkingSet<M, B>::RenderGroup;
-    //     using MetaballRenderGroupRange = MetaballWorkingSet<M, B>::MetaballRenderGroupRange;
-
-    //     static constexpr bool has_bounding_box = B;
-    
-    //     MetaballWorkingSet(IsoSurface& s);
-    //     ~MetaballWorkingSet();
-    
-    //     size_t add_metaball(M&& m) = 0;
-    //     M& get_metaball(const size_t i);
-    //     const M& get_metaball(const size_t i) const;
-    //     MetaballRenderGroupRange groups() &;
-    // };
     
     /** Container for a set of Metaballs in the Metaball Engine. Has specializations
      * such that it optimizes for when the metaball type has bounding boxes or not. 
@@ -83,17 +66,31 @@ namespace gtt {
             return index;
         }
 
+        bool remove_metaball(const size_t i) {
+            if (i >= balls.size()) return false;
+            std::swap(balls[i], balls.back());
+            balls.pop_back();
+            return true;
+        }
+
         /** Get the metaball in this Metaball Engine at index i */
         M& get_metaball(const size_t i) {
             return *balls[i];
         }
 
+        MetaballWorkingSet update_metaball(const size_t i) { return *this; }
+
         const M& get_metaball(const size_t i) const {
             return *balls[i];
         }
+
+        size_t size() const {
+            return balls.size();
+        }
     };
 
-    /** Specialization for types `M` that satisfy `HasBoundingBox<M>`. */
+    /** Specialization for MetaballWorkingSet on ScalarField types `M` that satisfy `HasBoundingBox<M>`. In other
+     * words, a MetaballWorkingSet for BoundedScalarField types. Unlike the normal MetaballWorkingSet,  */
     template <typename M> requires BoundedScalarField<M>
     struct MetaballWorkingSet<M> {
         std::vector<dsa::wrap::IndexWrapper<M>> balls;
@@ -103,6 +100,7 @@ namespace gtt {
         dsa::UnionFind joiner;
         dsa::UnionFindCollector collector;
         bool regenerate_groups = true;
+        bool reset_joiner = false;
 
         static constexpr bool has_bounding_box = true;
 
@@ -211,9 +209,52 @@ namespace gtt {
             return index;
         }
 
+        bool remove_metaball(const size_t i) {
+            if (i >= balls.size()) return false;
+            
+            /** Get all nodes that were swapped during removal & update indices */
+            const SwapBus locations = tree.remove(balls[i].index);
+            for (int32_t i = 0; i < locations.count; i++) {
+                const int32_t data_index = tree.nodes[locations.records[i].current].data_index;
+                balls[data_index].index = locations.records[i].current;
+            }
+
+            /** Swap and pop the actual removed node now */
+            const int32_t end_idx = (int32_t) balls.size() - 1;
+            if (i != end_idx) {
+                tree.nodes[balls[end_idx].index].data_index = i;
+                std::swap(balls[i], balls[end_idx]);
+            }
+
+            balls.pop_back();
+            joiner.pop_unsafe();
+
+            regenerate_groups = true;
+            reset_joiner = true;
+            return true;
+        }
+
+        MetaballWorkingSet update_metaball(const size_t i) {
+            if (i >= balls.size()) return *this;
+
+            int32_t tree_index = balls[i].index;
+            const BoundingBox& bb = balls[i]->get_bounding_box();
+            
+            /** Remove and reinsert metaball if it's outside its AABBTree Bounding Box */
+            if (!contains(tree.nodes[tree_index].bb, bb)) {
+                tree.remove(tree_index);
+                tree_index = tree.insert(i, bb);
+                balls[i].index = tree_index;
+                regenerate_groups = true;
+                reset_joiner = true;
+            }
+
+            return *this;
+        }
+
         MetaballRenderGroupRange groups() & {
             if (regenerate_groups) {
-                // std::cout << "Re-fitting UnionFindCollector to UnionFind" << std::endl;
+                if (reset_joiner) joiner.reset();
 
                 BallContainer& balls_local = balls;
                 gtt::AABBTree& tree_local = tree;
@@ -231,6 +272,7 @@ namespace gtt {
     
                 collector.fit(joiner);
                 regenerate_groups = false;
+                reset_joiner = false;
             }
 
             return MetaballRenderGroupRange(
