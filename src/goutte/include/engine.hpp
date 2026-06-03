@@ -75,6 +75,17 @@ namespace gtt {
                 return metaballs.get_metaball(i);
             }
 
+            MetaballEngine<M>& remove_metaball(size_t i) {
+                metaballs.remove_metaball(i);
+                return *this;
+            }
+
+            /** */
+            MetaballEngine<M>& update_metaball(size_t i) {
+                metaballs.update_metaball(i);
+                return *this;
+            }
+
             MetaballEngine<M>& make_dirty() {
                 is_dirty = true;
                 return *this;
@@ -212,15 +223,16 @@ namespace gtt {
         return -1 * lalg::unit(compute_gradient(rg, p));
     }
 
-    // template <typename M>
-    // MetaballEngine<M>& MetaballEngine<M>::update_densities(RenderGroup& rg) {
-    //     num_valid_points = 0;
-    //     for (IsoPoint& field_point : field.isopoints() ) {
-    //         field_point.density = sum_metaballs(rg, field_point.position);
-    //         num_valid_points += (int32_t) (field_point.density >= isovalue);
-    //     }
-    //     return *this;
-    // }
+    template <ScalarField M>
+    MetaballEngine<M>& MetaballEngine<M>::update_densities(RenderGroup& rg) {
+        num_valid_points = 0;
+        for (IndexDim idx : rg.fr) {
+            IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
+            pt.density = sum_metaballs(rg, pt.position.x, pt.position.y, pt.position.z);
+            num_valid_points += (int32_t) (pt.density >= isovalue);
+        }
+        return *this;
+    }
 
     template <ScalarField M>
     CubeBitsResult MetaballEngine<M>::compute_cube_bits(
@@ -339,32 +351,17 @@ namespace gtt {
 
     template <ScalarField M>
     const common::graphics::MeshData& MetaballEngine<M>::construct_mesh() {
-        if (!is_dirty) {
-            return mesh_data;
-        }
-
-        // std::cout << "IsoSurface shape: " << to_string(field.shape()) << std::endl;
-        // std::cout << "Setting point densities\n" << std::endl;
+        if (!is_dirty) return mesh_data;
 
         is_dirty = false;
-        int32_t valid_points = 0;
-        int i = 0;
         for (RenderGroup rg : metaballs.groups()) {
-            // std::cout << "\nIterate through field range points" << std::endl;
-            // print_render_group(rg, i);
-            // std::cout << std::endl;
-            for (IndexDim idx : rg.fr) {
-                IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
-                pt.density = sum_metaballs(rg, pt.position.x, pt.position.y, pt.position.z);
-                num_valid_points += (int32_t) (pt.density >= isovalue);
-            }
-            i += 1;
+            update_densities(rg);
         }
         
         mesh_data.vertices.clear();
-        mesh_data.vertices.reserve(valid_points);
+        mesh_data.vertices.reserve(num_valid_points);
         mesh_data.indices.clear();
-        mesh_data.indices.reserve(valid_points);
+        mesh_data.indices.reserve(num_valid_points);
 
         // Buffers we'll reuse multiple times in this loop
         CubeOrderedIsopoints ordered_iso_points = {};
