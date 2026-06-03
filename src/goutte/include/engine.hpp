@@ -86,6 +86,10 @@ namespace gtt {
                 return *this;
             }
 
+            size_t size() const {
+                return metaballs.size();
+            }
+
             MetaballEngine<M>& make_dirty() {
                 is_dirty = true;
                 return *this;
@@ -132,7 +136,7 @@ namespace gtt {
              * data from said field. */
             const common::graphics::MeshData& construct_mesh();
 
-            const std::vector<lalg::vec4> construct_point_cloud();
+            const std::vector<lalg::vec4>& construct_point_cloud(std::vector<lalg::vec4>& positions);
 
             template <typename T>
             std::string to_string(const gtt::lalg::vec<T,3>& v) {
@@ -225,7 +229,6 @@ namespace gtt {
 
     template <ScalarField M>
     MetaballEngine<M>& MetaballEngine<M>::update_densities(RenderGroup& rg) {
-        num_valid_points = 0;
         for (IndexDim idx : rg.fr) {
             IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
             pt.density = sum_metaballs(rg, pt.position.x, pt.position.y, pt.position.z);
@@ -323,28 +326,27 @@ namespace gtt {
     }
 
     template <ScalarField M>
-    const std::vector<lalg::vec4> MetaballEngine<M>::construct_point_cloud() {
-        std::vector<lalg::vec4> positions;
+    const std::vector<lalg::vec4>& MetaballEngine<M>::construct_point_cloud(std::vector<lalg::vec4>& positions) {
 
-        int32_t total_points = 0;
+        //int32_t total_points = 0;
         for (RenderGroup rg : metaballs.groups()) {
-            int32_t count = 0;
+            //int32_t count = 0;
             for (IndexDim idx : rg.fr) {
                 IsoPoint& pt = field.get(idx.x, idx.y, idx.z);
                 pt.density = sum_metaballs(rg, pt.position);
                 positions.emplace_back(pt.position.x, pt.position.y, pt.position.z, pt.density);
-                count += 1;
+                //count += 1;
             }
 
             IndexDim diff = rg.fr.high() - rg.fr.low();
             int32_t volume = diff.x * diff.y * diff.z;
 
-            std::cout << "Expected = " << volume << ", Actual = " << count << std::endl;
-            total_points += count;
+            //std::cout << "Expected = " << volume << ", Actual = " << count << std::endl;
+           // total_points += count;
         }
 
-        float total_search_space = (float) total_points / (float) field.indices();
-        std::cout << "Processed " << (total_search_space * 100.f) << "% of the IsoSurface." << std::endl;
+        //float total_search_space = (float) total_points / (float) field.indices();
+        //std::cout << "Processed " << (total_search_space * 100.f) << "% of the IsoSurface." << std::endl;
 
         return positions;
     }
@@ -354,6 +356,7 @@ namespace gtt {
         if (!is_dirty) return mesh_data;
 
         is_dirty = false;
+        num_valid_points = 0;
         for (RenderGroup rg : metaballs.groups()) {
             update_densities(rg);
         }
@@ -369,7 +372,6 @@ namespace gtt {
         OutVertices cube_out_vertices = {};
         OutIndices cube_out_indices = {};
 
-        // std::cout << "Initiate marching cube process" << std::endl;
         for (RenderGroup rg : metaballs.groups()) {
             for (CubeView cv : MarchingCubeRange(field, FieldRange(rg.fr))) {
                 const CubeBitsResult cbr = compute_cube_bits(cv, ordered_iso_points);

@@ -78,7 +78,7 @@ namespace gtt {
             return *balls[i];
         }
 
-        MetaballWorkingSet update_metaball(const size_t i) { return *this; }
+        MetaballWorkingSet& update_metaball(const size_t i) { return *this; }
 
         const M& get_metaball(const size_t i) const {
             return *balls[i];
@@ -159,7 +159,7 @@ namespace gtt {
                 using iterator_category = std::forward_iterator_tag;
                 
                 value_type operator*() const  {
-                    std::cout << "group : " << accessor->component_of(component_start_index) << ", start = " << component_start_index << " , end = " << cur_index <<  std::endl;
+                    // std::cout << "MetaballWorkingSet::MetaballRenderGroupRangeIterator::operator*:: group : " << accessor->component_of(component_start_index) << ", start = " << component_start_index << " , end = " << cur_index <<  std::endl;
                     return value_type(
                         bbox_to_field(accessor.surface, accumulator),
                         std::span(accessor.accessor.sorted_mappings.data() + component_start_index, (size_t) cur_index - component_start_index )
@@ -234,7 +234,7 @@ namespace gtt {
             return true;
         }
 
-        MetaballWorkingSet update_metaball(const size_t i) {
+        MetaballWorkingSet& update_metaball(const size_t i) {
             if (i >= balls.size()) return *this;
 
             int32_t tree_index = balls[i].index;
@@ -242,9 +242,27 @@ namespace gtt {
             
             /** Remove and reinsert metaball if it's outside its AABBTree Bounding Box */
             if (!contains(tree.nodes[tree_index].bb, bb)) {
-                tree.remove(tree_index);
+                //std::cout << "MetaballWorkingSet::update_metaball:: Metaball " << i << " escaped its Bounding Box" << std::endl;
+            
+                const SwapBus locations = tree.remove(tree_index);
+                //printf("MetaballWorkingSet::update_metaball:: SwapBus count = %d\n", locations.count);
+
+                // std::cout << "MetaballWorkingSet::update_metaball:: Updating indices" << std::endl;
+                for (int32_t j = 0; j < locations.count; j++) {
+                    //std::printf("MetaballWorkingSet::update_metaball:: SwapRecord = (%d -> %d)\n", locations.records[j].former, locations.records[j].current);
+                    const int32_t data_index = tree.nodes[locations.records[j].current].data_index;
+
+                    //std::printf("Updating metaball index, data_index = %d\n", data_index);
+                    balls[data_index].index = locations.records[j].current;
+                }
+
+                //std::cout << "MetaballWorkingSet::update_metaball:: re-inserting metaball into Tree" << std::endl;
+
                 tree_index = tree.insert(i, bb);
                 balls[i].index = tree_index;
+
+                //std::cout << "Setting flags" << std::endl;
+
                 regenerate_groups = true;
                 reset_joiner = true;
             }
@@ -254,6 +272,18 @@ namespace gtt {
 
         MetaballRenderGroupRange groups() & {
             if (regenerate_groups) {
+                // printf("Regenerating groups\n");
+                // for (int32_t i = 0; i < tree.nodes.size(); i++) {
+                //     AABBNode& node = tree.nodes[i];
+                //     if (node.is_leaf()) {
+                //         std::printf("MetaballWorkingSet::groups AABB Leaf Node Index = %d\n", i);
+                //     }
+                // }
+
+                // for (int32_t i = 0; i < balls.size(); i++) {
+                //     std::printf("MetaballWorkingSet::groups BALL[%d]=%d\n", i, balls[i].index);
+                // }
+
                 if (reset_joiner) joiner.reset();
 
                 BallContainer& balls_local = balls;
@@ -264,12 +294,17 @@ namespace gtt {
                     const int32_t mball_a = tree_local.nodes[a].data_index;
                     const int32_t mball_b = tree_local.nodes[b].data_index;
 
+                    //std::printf("BOUNDING BOXES OF %d and %d OVERLAP\n", a, b);
+
                     // the AABB Bounding Boxes overlap, but do the ACTUAL bounds overlap themselves?
-                    if (overlapping(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
+       ;             if (overlapping(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
+                        //std::printf("METABALLS %d and %d OVERLAP\n", a, b);
                         joiner_local.unite(mball_a, mball_b);
                     }
                 });
     
+                //std::printf("MetaballWorkingSet::groups:: Fitting UnionFindCollector to UnionFind\n");
+                //joiner.debug_print();
                 collector.fit(joiner);
                 regenerate_groups = false;
                 reset_joiner = false;
@@ -288,6 +323,10 @@ namespace gtt {
         /** Get the metaball in this Metaball Engine at integer index i. */
         const M& get_metaball(const size_t i) const {
             return *balls[i];
+        }
+
+        const size_t size() const {
+            return balls.size();
         }
     };
 }

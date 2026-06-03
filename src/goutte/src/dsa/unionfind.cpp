@@ -1,5 +1,6 @@
 #include <dsa/unionfind.hpp>
 #include <cstring>
+#include <iostream>
 
 using namespace gtt::dsa;
 
@@ -21,25 +22,40 @@ UnionFind& UnionFind::pop_unsafe() {
     return *this;
 }
 
+const UnionFind& UnionFind::debug_print() const {
+    std::cout << "UnionFind::debug_print::[";
+    size_t N = parents.size();
+
+    if (N > 0) {
+        std::cout << "(P:" << parents[0] << ",S:" << sizes[0] << ")";
+    }
+
+    for (size_t i = 1; i < parents.size(); i++) {
+        std::cout << ", (P:" << parents[i] << ",S:" << sizes[i] << ")";
+    }
+
+    std::cout << "]" << std::endl;
+    return *this;
+}
+
 UnionFind::uf_index_t UnionFind::find_mut(const uf_index_t x) {
-    uf_index_t top_parent = parents[x];
-    stack.push(StackFrame(false, x));
+    if (parents[x] == x) {
+        return x;
+    }
+
+    // Discovery phase
+    uf_index_t current = x;
+    while (parents[current] != current) {
+        stack.push(StackFrame(false, current));
+        current = parents[current];
+    }
+    
+    // Backtrack and compress paths
+    uf_index_t top_parent = current;
     while (!stack.empty()) {
         StackFrame& frame = stack.top();
-
-        // backtracking
-        if (*frame) {
-            parents[frame.index] = top_parent;
-            stack.pop();
-
-        // first visit
-        } else {
-            frame.item = true;
-            if (parents[frame.index] == frame.index) {
-                top_parent = frame.index;
-                stack.pop();
-            }
-        }
+        parents[frame.index] = top_parent;
+        stack.pop();
     }
 
     stack.reset();
@@ -102,9 +118,10 @@ UnionFind& UnionFind::remove_vertex(const uf_index_t x) {
 }
 
 UnionFind& UnionFind::reset() {
-    const size_t N = parents.size();
-    for (int i = 0; i < N; i++) { parents[i] = i; }
-    std::memset(sizes.data(), 1, parents.size());
+    // std::printf("\nUnionFind::reset()\n\n");
+    const int32_t N = (int32_t) parents.size();
+    for (int32_t i = 0; i < N; i++) { parents[i] = i; }
+    std::fill(sizes.begin(), sizes.end(), 1);
     return *this;
 }
 
@@ -182,21 +199,33 @@ UnionFind::uf_index_t UnionFindCollector::to_uf(const int32_t flat_index) const 
     return accessor.to_uf(flat_index);
 }
 
-#include <iostream>
 
 UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
     const int32_t N = (int32_t) uf.num_nodes();
     if (N != size()) {
-        accessor.counts = std::vector<int32_t>(N);
-        accessor.sorted_mappings = std::vector<int32_t>(N);
+        accessor.counts = std::vector<int32_t>(N, 0);
+        accessor.sorted_mappings = std::vector<int32_t>(N, 0);
     }
+
+    // std::cout << "UnionFindCollector:: N = " << N << std::endl;
+
+    // for (int i = 0; i < N; i++) {
+    //     std::printf("UnionFindCollector::fit:: find(%d) = %d\n", i, (int32_t) uf.get_parents()[i]);
+    // }
  
     int32_t sum = 0;
     for (int32_t i = 0; i < N; i++) {
+        // std::printf("UnionFindCollector::fit:: subtree_size(%d) = %d\n", i, (int32_t) uf.subtree_size(i));
         const int32_t count = (int32_t) uf.is_root(i) * (int32_t) uf.subtree_size(i);
         accessor.counts[i] = sum;
         sum += count;
     }
+    
+    // std::cout << "ACCESSOR::COUNTS(1)::[";
+    // for (int i = 0; i < N; i++) {
+    //     std::cout << accessor.counts[i] << ",";
+    // }
+    // std::cout << "]" << std::endl;
 
     for (int32_t i = 0; i < N; i++) {
         const int32_t root = uf.find(i);
@@ -205,9 +234,22 @@ UnionFindCollector& UnionFindCollector::fit(const UnionFind& uf) {
         root_count += 1;
     }
 
+    // std::cout << "ACCESSOR::SORTED_MAPPINGS::[";
+    // for (int i = 0; i < N; i++) {
+    //     std::cout << accessor.sorted_mappings[i] << ",";
+    // }
+    // std::cout << "]" << std::endl;
+
+
     for (int32_t i = 0; i < N; i++) {
         accessor.counts[i] = uf.find(i);
     }
+
+    // std::cout << "ACCESSOR::COUNTS(2)::[";
+    // for (int i = 0; i < N; i++) {
+    //     std::cout << accessor.counts[i] << ",";
+    // }
+    // std::cout << "]" << std::endl;
 
     return *this;
 }

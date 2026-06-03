@@ -171,7 +171,7 @@ namespace gtt {
      * function updates `old.current` to be equal to `recent.current` if such a relation
      * exists between the two. */
     bool transfer(SwapRecord& old, const SwapRecord& recent) {
-        if (old.current != -1 && old.current == recent.former) {
+        if (old.current != -1 && old.former != -1 && old.current == recent.former) {
             old.current = recent.current;
             return true;
         }
@@ -203,6 +203,7 @@ namespace gtt {
         }
         
         if (sib->is_leaf()) {
+            // std::printf("AABBTree::raise_sibling_node:: adding record (%d -> %d)\n", old_sibling_idx, cur->parent);
             add_record(bus, old_sibling_idx, cur->parent);
         }
 
@@ -231,7 +232,8 @@ namespace gtt {
         nodes.pop_back();
 
         // If no transfer & the swap node wasn't the new sibling idx & end_idx != remove_idx & swap node != old sibling idx (since we'll delete it anyways)...
-        if (!transfer(bus.records[0], nouveau) && remove_idx != nouveau.former && old_sibling_idx != nouveau.former) {
+        if (!transfer(bus.records[0], nouveau) && remove_idx != nouveau.former && old_sibling_idx != nouveau.former && nodes[nouveau.current].is_leaf()) {
+            // std::printf("AABBTree::remove:: adding record post swap (1) (%d -> %d)\n", nouveau.former, nouveau.current);
             add_record(bus, nouveau.former, nouveau.current);
         }
 
@@ -242,7 +244,8 @@ namespace gtt {
         nouveau = swap_and_pop(*this, old_sibling_idx);
         nodes.pop_back();
 
-        if (!transfer(bus.records[0], nouveau) && !transfer(bus.records[1], nouveau) && old_sibling_idx != nouveau.former) {
+        if (!transfer(bus.records[0], nouveau) && !transfer(bus.records[1], nouveau) && old_sibling_idx != nouveau.former && nodes[nouveau.current].is_leaf()) {
+            // std::printf("AABBTree::remove:: adding record post swap (2) (%d -> %d)\n", nouveau.former, nouveau.current);
             add_record(bus, nouveau.former, nouveau.current);
         }
 

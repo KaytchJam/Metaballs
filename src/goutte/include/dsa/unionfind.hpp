@@ -36,6 +36,7 @@ namespace gtt {
                 UnionFind& isolate(const uf_index_t a);                     // Make node `a` disjoint. 
                 UnionFind& update(const uf_index_t a, const uf_index_t b);  // Update all nodes n with parent(n) = a to parent(n) = b
                 UnionFind& pop_unsafe();                                    // Reduce the size of the UnionFind and make no other modifications
+                const UnionFind& debug_print() const;
 
                 inline bool is_root(const uf_index_t x) const;              // Returns whether node `x` is a root node or not.
                 inline size_t num_nodes() const;                            // Returns the total number of nodes in this union find struct.
