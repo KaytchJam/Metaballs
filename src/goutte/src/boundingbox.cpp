@@ -36,6 +36,14 @@ namespace gtt {
         );
     }
 
+    bool contains_point(const BoundingBox& bb, const lalg::vec3& pt) {
+        return (
+            (bb.min_point.x <= pt.x && pt.x <= bb.max_point.x) &&
+            (bb.min_point.y <= pt.y && pt.y <= bb.max_point.y) &&
+            (bb.min_point.z <= pt.z && pt.z <= bb.max_point.z)
+        );
+    }
+
     BoundingBox join(const BoundingBox& b1, const BoundingBox& b2) {
         return BoundingBox(
             min(b1.min_point, b2.min_point),

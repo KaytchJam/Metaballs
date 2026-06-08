@@ -56,6 +56,7 @@ struct BoundingBox {
 
 namespace gtt {
     bool contains(const BoundingBox& a, const BoundingBox& b);
+    bool contains_point(const BoundingBox& a, const lalg::vec3& pt);
     BoundingBox join(const BoundingBox& b1, const BoundingBox& b2);
     bool overlapping(const BoundingBox& a, const BoundingBox& b);
     BoundingBox expand(const BoundingBox& b, const float constant);
