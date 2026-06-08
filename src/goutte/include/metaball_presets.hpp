@@ -22,7 +22,7 @@ namespace gtt {
 
             BoundingBox get_bounding_box() const {
                 const lalg::vec3 sqrt_of_scale_vec(sqrtf(m_scale));
-                return BoundingBox{ m_center - sqrt_of_scale_vec, m_center + sqrt_of_scale_vec,  };
+                return BoundingBox(m_center - sqrt_of_scale_vec, m_center + sqrt_of_scale_vec);
             }
         };
 
@@ -75,7 +75,16 @@ namespace gtt {
                 const float dx = m_center.x - x;
                 const float dy = m_center.y - y;
                 const float dz = m_center.z - z;
-                return m_scale / (dx*dx + dy*dy + dz*dz);
+                
+                const float distance = dx*dx + dy*dy + dz*dz;
+                const float cutoff = std::sqrtf(m_scale) * m_influence;
+                
+                if (distance >= cutoff * cutoff) {
+                    return 0.f;
+                }
+                
+                const float falloff = distance / cutoff;
+                return m_scale / distance * (1 - falloff * falloff);
             }
 
             lalg::vec3& update(const float dt) {
@@ -85,7 +94,7 @@ namespace gtt {
 
             BoundingBox get_bounding_box() const {
                 const lalg::vec3 sqrt_of_scale_vec(sqrtf(m_scale) * m_influence);
-                return BoundingBox{ m_center - sqrt_of_scale_vec, m_center + sqrt_of_scale_vec };
+                return BoundingBox(m_center - sqrt_of_scale_vec, m_center + sqrt_of_scale_vec);
             }
         };
 
