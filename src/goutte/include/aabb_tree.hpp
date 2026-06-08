@@ -48,12 +48,19 @@ namespace gtt {
         int32_t root = 0;
         std::vector<AABBNode> nodes;
 
-        AABBTree() {}
+        /** How much to scale the Bounding Box of an inputted Metaball */
+        float bb_scale = 1.0f;
+
+        AABBTree(const float bb_scale_factor = 1.0f) : bb_scale(bb_scale_factor) {}
         AABBTree(AABBTree&& other);
 
         /** Insert some data into the AABB Tree, where the data is associated with
         * `BoundingBox` bb. The index of the inserted data is returned. */
         int32_t insert(int32_t data_index, const BoundingBox& bb);
+
+        /** Removes leaf node located at index `idx` in the AABBTree. Returns a "SwapBus",
+         * a list of maximum (Valid) length 3, indicating the old and new indices of leaf nodes
+         * swapped in the process of removing node @ 'idx' */
         SwapBus remove(const int32_t idx);
 
         // template <std::input_iterator Iter>
@@ -66,6 +73,9 @@ namespace gtt {
 
         /** Count the number of leaves in this `AABBTree`. */
         size_t count_leaves() const;
+
+        /** Return the size of the AABBTree */
+        size_t size() const;
 
         /** Find all simultaneous  */
         template <std::invocable<int32_t,int32_t> F>
@@ -130,5 +140,24 @@ namespace gtt {
             }
         }
     }
+
+    /** Iterator that traverses an AABB Tree. Traversing through the tree yields
+     * all overlapping leaf nodes in the AABB Tree. */
+    struct OverlapTraversal {
+        using IndexPair = std::pair<int32_t, int32_t>;
+        AABBTree* tree;
+        std::vector<IndexPair> stack;
+        bool found = false;
+        IndexPair value = IndexPair(-1, -1);
+
+        OverlapTraversal(AABBTree& tree_in);
+
+        std::pair<IndexPair, bool> find_overlap();
+        bool has_next();
+        IndexPair next();
+
+        OverlapTraversal& reset();
+        OverlapTraversal& bind(AABBTree& tree_in);
+    };
 };
 

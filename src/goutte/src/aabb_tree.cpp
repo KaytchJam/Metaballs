@@ -49,10 +49,10 @@ namespace gtt {
     AABBTree::AABBTree(AABBTree&& tree) {
         this->root = tree.root;
         this->nodes = std::move(tree.nodes);
+        this->bb_scale = tree.bb_scale;
 
         // Exhaust the source tree
         tree.nodes.clear();
-        tree.nodes.shrink_to_fit();
         tree.root = -1;
     }
 
@@ -62,6 +62,10 @@ namespace gtt {
             count += (size_t) ab.is_leaf();
         }
         return count;
+    }
+
+    size_t AABBTree::size() const {
+        return nodes.size();
     }
 
     void AABBTree::recalculate_upwards(int32_t from_idx) {
@@ -80,7 +84,7 @@ namespace gtt {
     int32_t AABBTree::insert(int32_t data_index, const BoundingBox& bb) {
         const int32_t insert_idx = (int32_t) nodes.size();
         nodes.push_back(AABBNode::empty());
-        nodes[insert_idx].bb = scale(bb, 1.1f);
+        nodes[insert_idx].bb = scale(bb, bb_scale);
         nodes[insert_idx].data_index = data_index;
 
         if (insert_idx != root) {
@@ -271,5 +275,98 @@ namespace gtt {
         }
 
         return out_state;
+    }
+
+
+    OverlapTraversal::OverlapTraversal(AABBTree& tree_in) : tree(&tree_in) {
+        if (tree->size() > 0) {
+            stack.push_back({tree->root, tree->root});
+        }
+    }
+
+    std::pair<OverlapTraversal::IndexPair, bool> OverlapTraversal::find_overlap() {
+        bool found_overlap = false;
+        IndexPair pair = IndexPair(-1, -1);
+
+        while (!found_overlap && !stack.empty()) {
+            const IndexPair frame = stack.back();
+            stack.pop_back();
+
+            AABBNode* const A = &tree->nodes[frame.first];
+            AABBNode* const B = &tree->nodes[frame.second];
+
+            switch (tree->get_overlap_leaf_state(*A,*B)) {
+                // Succcessful overlap found. Break traversal & return pair
+                case AABBTree::OverlapLeafState::BOTH_IS_LEAF:
+                    if (frame.first != frame.second) {
+                        pair = frame;
+                        found_overlap = true;
+                    }
+                    break;
+
+                // continue traversal along the second node, B
+                case AABBTree::OverlapLeafState::FIRST_IS_LEAF:
+                    stack.push_back({frame.first, B->left});
+                    stack.push_back({frame.first, B->right}); 
+                    break;
+                    
+                // continue traversal along the first node, A
+                case AABBTree::OverlapLeafState::SECOND_IS_LEAF:
+                    stack.push_back({A->left, frame.second});
+                    stack.push_back({A->right, frame.second});
+                    break;
+
+                // traverse down both A & B simultaneously
+                case AABBTree::OverlapLeafState::NEITHER_IS_LEAF:
+                    if (A != B) stack.push_back({A->right, B->left});
+                    stack.push_back({A->left, B->left});
+                    stack.push_back({A->left, B->right});
+                    stack.push_back({A->right, B->right});
+                    break;
+
+                // also covers the NO OVERLAP case. We do nothing.
+                default:
+                    break;
+            }
+        }
+
+        return std::make_pair(pair, found_overlap);
+    }
+
+    bool OverlapTraversal::has_next() {
+        if (!found) {
+            std::tie(value, found) = find_overlap();
+        }
+
+        return found;
+    }
+
+    OverlapTraversal::IndexPair OverlapTraversal::next() {
+        if (found) {
+            IndexPair out = value;
+            std::tie(value, found) = find_overlap();
+            return out;
+        }
+
+        std::tie(value, found) = find_overlap();
+        return value;
+    }
+    
+    OverlapTraversal& OverlapTraversal::reset() {
+        value = IndexPair(-1, -1);
+        found = false;
+        
+        stack.clear();
+        if (tree->size() > 0) {
+            stack.push_back({ tree->root, tree->root });
+        }
+
+        return *this;
+    }
+    
+    OverlapTraversal& OverlapTraversal::bind(AABBTree& tree_in) {
+        tree = &tree_in;
+        this->reset();
+        return *this;
     }
 }
