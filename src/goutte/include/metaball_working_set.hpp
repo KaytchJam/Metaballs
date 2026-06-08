@@ -11,6 +11,7 @@
 #include <span>
 #include <sstream>
 #include <iostream>
+#include <ranges>
 
 namespace gtt {
     template <typename Range>
@@ -40,8 +41,6 @@ namespace gtt {
     struct MetaballWorkingSet {
         std::vector<dsa::wrap::PlaceboWrapper<M>> balls;
         const IsoSurface& surface;
-        
-        static constexpr bool has_bounding_box = false;
 
         using BallContainer = std::vector<dsa::wrap::PlaceboWrapper<M>>;
         using GroupRangeType = IntRange;
@@ -95,14 +94,12 @@ namespace gtt {
     struct MetaballWorkingSet<M> {
         std::vector<dsa::wrap::IndexWrapper<M>> balls;
         const IsoSurface& surface;
-
         AABBTree tree;
+        OverlapTraversal traverse;
         dsa::UnionFind joiner;
         dsa::UnionFindCollector collector;
         bool regenerate_groups = true;
         bool reset_joiner = false;
-
-        static constexpr bool has_bounding_box = true;
 
         using BallContainer = std::vector<dsa::wrap::IndexWrapper<M>>;
         using Accessor = dsa::UnionFindCollector::Accessor;
@@ -117,8 +114,7 @@ namespace gtt {
         };
 
         MetaballWorkingSet(const IsoSurface& s) 
-            : balls(), tree(), surface(s), joiner(0), collector() {
-        }
+            : balls(), tree(1.5f), surface(s), joiner(0), collector(), traverse(tree) {}
 
         /** Effectively a rewrite of ComponentRangeIterator that accumulates / folds
          * by BoundingBox as it progresses. */
@@ -242,27 +238,15 @@ namespace gtt {
             
             /** Remove and reinsert metaball if it's outside its AABBTree Bounding Box */
             if (!contains(tree.nodes[tree_index].bb, bb)) {
-                //std::cout << "MetaballWorkingSet::update_metaball:: Metaball " << i << " escaped its Bounding Box" << std::endl;
-            
                 const SwapBus locations = tree.remove(tree_index);
-                //printf("MetaballWorkingSet::update_metaball:: SwapBus count = %d\n", locations.count);
-
-                // std::cout << "MetaballWorkingSet::update_metaball:: Updating indices" << std::endl;
                 for (int32_t j = 0; j < locations.count; j++) {
-                    //std::printf("MetaballWorkingSet::update_metaball:: SwapRecord = (%d -> %d)\n", locations.records[j].former, locations.records[j].current);
-                    const int32_t data_index = tree.nodes[locations.records[j].current].data_index;
-
-                    //std::printf("Updating metaball index, data_index = %d\n", data_index);
-                    balls[data_index].index = locations.records[j].current;
+                    const int32_t tree_index = locations.records[j].current;
+                    const int32_t ball_index = tidx_to_midx(tree_index);
+                    balls[ball_index].index = tree_index;
                 }
-
-                //std::cout << "MetaballWorkingSet::update_metaball:: re-inserting metaball into Tree" << std::endl;
 
                 tree_index = tree.insert(i, bb);
                 balls[i].index = tree_index;
-
-                //std::cout << "Setting flags" << std::endl;
-
                 regenerate_groups = true;
                 reset_joiner = true;
             }
@@ -270,48 +254,41 @@ namespace gtt {
             return *this;
         }
 
+        /** Maps a `metaball index` to its associated `tree index`. */
+        inline int32_t midx_to_tidx(const int32_t midx) {
+            return balls[midx].index;
+        }
+
+        /** Maps a `tree index` (for a leaf node) to its associated `metaball index`. */
+        inline int32_t tidx_to_midx(const int32_t tidx) {
+            return tree.nodes[tidx].data_index;
+        }
+
         MetaballRenderGroupRange groups() & {
             if (regenerate_groups) {
-                // printf("Regenerating groups\n");
-                // for (int32_t i = 0; i < tree.nodes.size(); i++) {
-                //     AABBNode& node = tree.nodes[i];
-                //     if (node.is_leaf()) {
-                //         std::printf("MetaballWorkingSet::groups AABB Leaf Node Index = %d\n", i);
-                //     }
-                // }
-
-                // for (int32_t i = 0; i < balls.size(); i++) {
-                //     std::printf("MetaballWorkingSet::groups BALL[%d]=%d\n", i, balls[i].index);
-                // }
-
                 if (reset_joiner) joiner.reset();
+                traverse.reset();
+                while (traverse.has_next()) {
+                    auto [a, b] = traverse.next();
+                    a = tidx_to_midx(a);
+                    b = tidx_to_midx(b);
 
-                BallContainer& balls_local = balls;
-                gtt::AABBTree& tree_local = tree;
-                gtt::dsa::UnionFind& joiner_local = joiner;
-
-                tree_local.all_overlaps([&balls_local, &tree_local, &joiner_local](const int32_t a, const int32_t b) {
-                    const int32_t mball_a = tree_local.nodes[a].data_index;
-                    const int32_t mball_b = tree_local.nodes[b].data_index;
-
-                    //std::printf("BOUNDING BOXES OF %d and %d OVERLAP\n", a, b);
-
-                    // the AABB Bounding Boxes overlap, but do the ACTUAL bounds overlap themselves?
-       ;             if (overlapping(balls_local[mball_a]->get_bounding_box(), balls_local[mball_b]->get_bounding_box())) {
-                        //std::printf("METABALLS %d and %d OVERLAP\n", a, b);
-                        joiner_local.unite(mball_a, mball_b);
+                    if (overlapping(balls[a]->get_bounding_box(), balls[b]->get_bounding_box())) {
+                        joiner.unite(a, b);
                     }
-                });
+                }
     
-                //std::printf("MetaballWorkingSet::groups:: Fitting UnionFindCollector to UnionFind\n");
-                //joiner.debug_print();
                 collector.fit(joiner);
                 regenerate_groups = false;
                 reset_joiner = false;
             }
 
             return MetaballRenderGroupRange(
-                AccessorPlus(collector.get_accessor(), balls, surface)
+                AccessorPlus(
+                    collector.get_accessor(), 
+                    balls, 
+                    surface
+                )
             );
         }
 
