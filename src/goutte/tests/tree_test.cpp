@@ -65,7 +65,7 @@ bool remove_mapping(std::vector<CharIdx>& mappings, AABBTree& tree, const int32_
 }
 
 int main() {
-    AABBTree tree;
+    AABBTree tree(1.5f);
     BoundingBox boxes[] = {
         BoundingBox(vec3(-5, 1, 0), vec3(-3, 5, 0)),
         BoundingBox(vec3(1, -1, 0), vec3(2, 2, 0)),
@@ -83,12 +83,35 @@ int main() {
     // Initial Structure of AABB Tree
     print_tree_with_mappings(tree, mappings.data());
 
-    int32_t removals = 0;
-    while (remove_mapping(mappings, tree, 0)) {
-        std::cout << "\nRemoval " << removals << std::endl;
-        print_tree_with_mappings(tree, mappings.data());
-        removals += 1;
+    // int32_t removals = 0;
+    // while (remove_mapping(mappings, tree, 0)) {
+    //     std::cout << "\nRemoval " << removals << std::endl;
+    //     print_tree_with_mappings(tree, mappings.data());
+    //     removals += 1;
+    // }
+
+
+    std::printf("Callback 'all_overlaps'.\n");
+    tree.all_overlaps([&tree](int32_t a, int32_t b) -> void {
+        std::printf(
+            "%d & %d are overlapping\n", 
+            tree.nodes[a].data_index, 
+            tree.nodes[b].data_index
+        );
+    });
+
+    std::printf("Iterator 'all_overlaps'.\n");
+    gtt::OverlapTraversal traverse(tree);
+    while (traverse.has_next()) {
+        gtt::OverlapTraversal::IndexPair pair = traverse.next();
+        std::printf(
+            "%d & %d are overlapping\n", 
+            tree.nodes[pair.first].data_index, 
+            tree.nodes[pair.second].data_index
+        );
     }
+
+    std::printf("Done.\n");
 
     return EXIT_SUCCESS;
 }
